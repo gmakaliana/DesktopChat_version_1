@@ -1,63 +1,25 @@
 """
 User Registration Module
 
-Responsible for registering new users
-into the Desktop Chat System.
+Responsible for creating new user accounts.
 
-This module handles:
-- Username checking
-- Password hashing
-- Saving user information
-- Registration validation
+Responsibilities:
+- Validate registration information.
+- Hash passwords.
+- Create users through database layer.
 
-It does not contain GUI code.
+Database operations are handled by:
+    database/queries.py
 """
 
 
 from datetime import datetime
 
-from database.db import get_connection
+
 from auth.password_utils import hash_password
 
 
-
-# ==========================================================
-# CHECK USERNAME EXISTS
-# ==========================================================
-
-def username_exists(username):
-    """
-    Checks whether a username already exists.
-
-    Args:
-        username (str): Username to check.
-
-    Returns:
-        bool: True if username exists,
-              False otherwise.
-    """
-
-    connection = get_connection()
-    cursor = connection.cursor()
-
-
-    cursor.execute(
-        """
-        SELECT user_id
-        FROM users
-        WHERE username = ?
-        """,
-        (username,)
-    )
-
-
-    user = cursor.fetchone()
-
-
-    connection.close()
-
-
-    return user is not None
+from database.queries import create_user
 
 
 
@@ -65,99 +27,107 @@ def username_exists(username):
 # REGISTER USER
 # ==========================================================
 
-def register_user(username, password, full_name):
+def register_user(
+    username,
+    password,
+    full_name
+):
     """
-    Registers a new user.
+    Creates a new user account.
 
     Args:
-        username (str): Login username.
-        password (str): User password.
-        full_name (str): User's full name.
+        username:
+            New username.
+
+        password:
+            Plain text password.
+
+        full_name:
+            User's full name.
+
 
     Returns:
         tuple:
-            (True, success message)
-            or
+            (True, message)
             (False, error message)
     """
 
 
-    # ------------------------------------------
-    # Basic Validation
-    # ------------------------------------------
 
-    if not username:
-        return False, "Username is required."
+    # ======================================================
+    # BASIC VALIDATION
+    # ======================================================
 
+    if username == "":
 
-    if not password:
-        return False, "Password is required."
-
-
-    if not full_name:
-        return False, "Full name is required."
+        return False, "Username is required"
 
 
 
-    # ------------------------------------------
-    # Check Existing Username
-    # ------------------------------------------
+    if password == "":
 
-    if username_exists(username):
-
-        return False, "Username already exists."
+        return False, "Password is required"
 
 
 
-    # ------------------------------------------
-    # Hash Password
-    # ------------------------------------------
+    if full_name == "":
 
-    hashed_password = hash_password(password)
+        return False, "Full name is required"
 
 
 
-    # ------------------------------------------
-    # Insert New User
-    # ------------------------------------------
+    # ======================================================
+    # PASSWORD LENGTH CHECK
+    # ======================================================
 
-    connection = get_connection()
-    cursor = connection.cursor()
+    if len(password) < 8:
+
+        return False, (
+            "Password must contain "
+            "at least 8 characters"
+        )
 
 
-    current_time = datetime.now().strftime(
+
+    # ======================================================
+    # HASH PASSWORD
+    # ======================================================
+
+    hashed_password = hash_password(
+        password
+    )
+
+
+
+    # ======================================================
+    # CREATE USER
+    # ======================================================
+
+    created_at = datetime.now().strftime(
         "%Y-%m-%d %H:%M:%S"
     )
 
 
-    cursor.execute(
-        """
-        INSERT INTO users
-        (
-            username,
-            password,
-            full_name,
-            status,
-            created_at
-        )
 
-        VALUES (?, ?, ?, ?, ?)
-
-        """,
-        (
-            username,
-            hashed_password,
-            full_name,
-            "Offline",
-            current_time
-        )
+    success = create_user(
+        username,
+        hashed_password,
+        full_name,
+        created_at
     )
 
 
-    connection.commit()
 
-    connection.close()
+    if success:
+
+        return True, (
+            "Account created successfully"
+        )
 
 
 
-    return True, "Registration successful."
+    else:
+
+        return False, (
+            "Username already exists"
+        )

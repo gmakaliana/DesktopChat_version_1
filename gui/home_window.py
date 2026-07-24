@@ -3,23 +3,44 @@ Home Window
 
 Main interface of the Desktop Chat System.
 
-This window appears after successful login.
-
 Responsibilities:
-- Display logged-in user information.
-- Display contacts area.
-- Display chat area.
+- Display logged-in user.
+- Display contacts.
+- Open chat window.
+- Open contact management.
 - Handle logout.
 
-Future:
-- Load contacts from database.
-- Real-time messaging using WebSockets.
-- Image sharing.
+Business logic is handled by:
+    modules/
 """
 
 
 import tkinter as tk
 from tkinter import ttk
+
+
+from datetime import datetime
+
+
+from modules.contacts.contacts import (
+    get_user_contacts
+)
+
+
+from gui.chat_window import (
+    open_chat_window
+)
+
+
+from gui.contacts_window import (
+    open_contacts_window
+)
+
+
+from database.queries import (
+    update_user_status,
+    update_last_seen
+)
 
 
 from utils.window_utils import (
@@ -31,7 +52,6 @@ from utils.window_utils import (
 from utils.gui_theme import (
     BACKGROUND,
     TITLE_FONT,
-    HEADER_FONT,
     NORMAL_FONT
 )
 
@@ -41,63 +61,160 @@ from utils.gui_theme import (
 # LOGOUT
 # ==========================================================
 
-def logout(window, login_window, user_id):
+def logout(
+    window,
+    user,
+    login_window
+):
     """
-    Logs the user out.
+    Logs out the current user.
 
-    Future:
-    - Update user status to Offline.
-    - Close WebSocket connection.
+    Actions:
+    - Change status to Offline.
+    - Save last seen.
+    - Close home window.
+    - Return to login.
     """
 
 
-    # Close home window
+    current_time = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
-    window.destroy()
+
+    update_user_status(
+        user["user_id"],
+        "Offline"
+    )
 
 
+    update_last_seen(
+        user["user_id"],
+        current_time
+    )
 
-    # Show login window again
+
+    close_window(
+        window
+    )
+
 
     login_window.deiconify()
 
 
 
 # ==========================================================
-# CLOSE HOME WINDOW
+# LOAD CONTACTS
 # ==========================================================
 
-def close_home_window(window, login_window):
+def load_contacts(
+    contacts_list,
+    current_user
+):
     """
-    Handles X button.
-
-    Does not close the whole application.
-    Returns user to login screen.
+    Loads user's contacts into listbox.
     """
 
 
-    window.destroy()
+    contacts_list.delete(
+        0,
+        tk.END
+    )
 
 
-    login_window.deiconify()
+    contacts = get_user_contacts(
+        current_user["user_id"]
+    )
+
+
+
+    if not contacts:
+
+
+        contacts_list.insert(
+            tk.END,
+            "No contacts"
+        )
+
+
+        return
+
+
+
+    for contact in contacts:
+
+
+        contacts_list.insert(
+            tk.END,
+            contact
+        )
 
 
 
 # ==========================================================
-# HOME WINDOW
+# OPEN SELECTED CHAT
 # ==========================================================
 
-def open_home_window(user, login_window):
+def open_selected_chat(
+    contacts_list,
+    current_user,
+    parent
+):
     """
-    Opens the main chat window.
-
-    Args:
-        user:
-            Logged-in user database row.
-
-        login_window:
-            Original login window.
+    Opens chat with selected contact.
     """
+
+
+    selected = contacts_list.curselection()
+
+
+
+    if not selected:
+
+        return
+
+
+
+    contact = contacts_list.get(
+        selected[0]
+    )
+
+
+
+    # Ignore empty list message
+
+    if contact == "No contacts":
+
+        return
+
+
+
+    open_chat_window(
+        parent,
+        current_user,
+        contact
+    )
+
+
+
+# ==========================================================
+# OPEN HOME WINDOW
+# ==========================================================
+
+def open_home_window(
+    user,
+    login_window
+):
+    """
+    Opens main application window.
+    """
+
+
+    update_user_status(
+        user["user_id"],
+        "Online"
+    )
+
 
 
     window = tk.Toplevel(
@@ -111,6 +228,7 @@ def open_home_window(user, login_window):
     )
 
 
+
     window.resizable(
         True,
         True
@@ -122,24 +240,22 @@ def open_home_window(user, login_window):
     )
 
 
+
     center_window(
         window,
-        1100,
-        700
+        900,
+        600
     )
 
 
-
-    # ======================================================
-    # WINDOW CLOSE EVENT
-    # ======================================================
 
     window.protocol(
         "WM_DELETE_WINDOW",
         lambda:
 
-        close_home_window(
+        logout(
             window,
+            user,
             login_window
         )
     )
@@ -149,6 +265,7 @@ def open_home_window(user, login_window):
     # ======================================================
     # HEADER
     # ======================================================
+
 
     header = ttk.Frame(
         window
@@ -165,14 +282,38 @@ def open_home_window(user, login_window):
 
     username_label = tk.Label(
         header,
-        text=f"Welcome, {user['full_name']}",
-        font=HEADER_FONT,
+        text=(
+            f"Welcome, "
+            f"{user['full_name']}"
+        ),
+        font=NORMAL_FONT,
         bg=BACKGROUND
     )
 
 
     username_label.pack(
         side="left"
+    )
+
+
+
+    # Manage Contacts Button
+
+    contacts_button = ttk.Button(
+        header,
+        text="Contacts",
+        command=lambda:
+
+        open_contacts_window(
+            window,
+            user
+        )
+    )
+
+
+    contacts_button.pack(
+        side="right",
+        padx=10
     )
 
 
@@ -184,8 +325,8 @@ def open_home_window(user, login_window):
 
         logout(
             window,
-            login_window,
-            user["user_id"]
+            user,
+            login_window
         )
     )
 
@@ -199,6 +340,7 @@ def open_home_window(user, login_window):
     # ======================================================
     # MAIN AREA
     # ======================================================
+
 
     main_frame = ttk.Frame(
         window
@@ -215,27 +357,27 @@ def open_home_window(user, login_window):
 
 
     # ======================================================
-    # CONTACTS PANEL
+    # CONTACT LIST
     # ======================================================
+
 
     contacts_frame = ttk.LabelFrame(
         main_frame,
-        text="Contacts"
+        text="My Contacts"
     )
 
 
     contacts_frame.pack(
         side="left",
         fill="y",
-        padx=(0,15)
+        padx=(0,10)
     )
 
 
 
     contacts_list = tk.Listbox(
         contacts_frame,
-        width=30,
-        font=NORMAL_FONT
+        width=30
     )
 
 
@@ -246,16 +388,31 @@ def open_home_window(user, login_window):
     )
 
 
-    contacts_list.insert(
-        tk.END,
-        "No contacts available"
+
+    load_contacts(
+        contacts_list,
+        user
+    )
+
+
+
+    contacts_list.bind(
+        "<Double-Button-1>",
+        lambda event:
+
+        open_selected_chat(
+            contacts_list,
+            user,
+            window
+        )
     )
 
 
 
     # ======================================================
-    # CHAT PANEL
+    # CHAT INFORMATION AREA
     # ======================================================
+
 
     chat_frame = ttk.LabelFrame(
         main_frame,
@@ -271,60 +428,17 @@ def open_home_window(user, login_window):
 
 
 
-    messages_box = tk.Text(
+    message = tk.Label(
         chat_frame,
-        wrap="word",
-        state="disabled",
-        font=NORMAL_FONT
+        text=(
+            "Select a contact "
+            "to start chatting"
+        ),
+        font=NORMAL_FONT,
+        bg=BACKGROUND
     )
 
 
-    messages_box.pack(
-        fill="both",
-        expand=True,
-        padx=10,
-        pady=10
-    )
-
-
-
-    # ======================================================
-    # MESSAGE INPUT
-    # ======================================================
-
-    input_frame = ttk.Frame(
-        chat_frame
-    )
-
-
-    input_frame.pack(
-        fill="x",
-        padx=10,
-        pady=10
-    )
-
-
-
-    message_entry = ttk.Entry(
-        input_frame
-    )
-
-
-    message_entry.pack(
-        side="left",
-        fill="x",
+    message.pack(
         expand=True
-    )
-
-
-
-    send_button = ttk.Button(
-        input_frame,
-        text="Send"
-    )
-
-
-    send_button.pack(
-        side="right",
-        padx=10
     )
