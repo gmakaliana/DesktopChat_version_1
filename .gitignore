@@ -1,0 +1,31 @@
+# Python cache
+__pycache__/
+*.pyc
+
+
+# Virtual environment
+venv/
+env/
+
+
+# SQLite database
+*.db
+
+
+# User uploaded files
+uploads/
+
+
+# IDE files
+.vscode/
+
+
+# PyInstaller files
+build/
+dist/
+*.spec
+
+
+# Operating system files
+.DS_Store
+Thumbs.db
