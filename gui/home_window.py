@@ -109,7 +109,8 @@ def logout(
 
 def load_contacts(
     contacts_list,
-    current_user
+    current_user,
+    contact_objects
 ):
     """
     Loads user's contacts into listbox.
@@ -122,20 +123,20 @@ def load_contacts(
     )
 
 
+    contact_objects.clear()
+
+
     contacts = get_user_contacts(
         current_user["user_id"]
     )
 
 
-
     if not contacts:
-
 
         contacts_list.insert(
             tk.END,
             "No contacts"
         )
-
 
         return
 
@@ -144,11 +145,20 @@ def load_contacts(
     for contact in contacts:
 
 
-        contacts_list.insert(
-            tk.END,
+        # Save complete contact information
+
+        contact_objects.append(
             contact
         )
 
+
+        # Display friendly text only
+
+        contacts_list.insert(
+            tk.END,
+            f"{contact['username']} "
+            f"({contact['full_name']})"
+        )
 
 
 # ==========================================================
@@ -157,6 +167,7 @@ def load_contacts(
 
 def open_selected_chat(
     contacts_list,
+    contact_objects,
     current_user,
     parent
 ):
@@ -175,9 +186,9 @@ def open_selected_chat(
 
 
 
-    contact = contacts_list.get(
+    contact = contact_objects[
         selected[0]
-    )
+    ]
 
 
 
@@ -380,6 +391,7 @@ def open_home_window(
         width=30
     )
 
+    contact_objects = []
 
     contacts_list.pack(
         fill="y",
@@ -391,7 +403,8 @@ def open_home_window(
 
     load_contacts(
         contacts_list,
-        user
+        user,
+        contact_objects
     )
 
 
@@ -402,6 +415,7 @@ def open_home_window(
 
         open_selected_chat(
             contacts_list,
+            contact_objects,
             user,
             window
         )

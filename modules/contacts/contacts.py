@@ -116,25 +116,31 @@ def add_new_contact(
 # GET USER CONTACTS
 # ==========================================================
 
-def get_user_contacts(
-    user_id
-):
+def get_user_contacts(user_id):
     """
-    Retrieves all contacts belonging
-    to a specific user.
+    Returns contacts belonging to a user.
 
-    Args:
-        user_id:
-            Logged-in user ID.
-
-    Returns:
-        List of contacts.
+    Converts sqlite rows into
+    dictionary objects for GUI use.
     """
 
 
-    contacts = get_contacts(
-        user_id
-    )
+    rows = get_contacts(user_id)
+
+
+    contacts = []
+
+
+    for row in rows:
+
+        contacts.append(
+            {
+                "user_id": row["user_id"],
+                "username": row["username"],
+                "full_name": row["full_name"],
+                "profile_picture": row["profile_picture"]
+            }
+        )
 
 
     return contacts
