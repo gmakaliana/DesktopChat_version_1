@@ -190,6 +190,10 @@ def update_user_status(
 ):
     """
     Updates online/offline status.
+
+    Returns:
+        True  - if update was successful
+        False - if an error occurred
     """
 
 
@@ -198,25 +202,42 @@ def update_user_status(
     cursor = connection.cursor()
 
 
+    try:
 
-    cursor.execute(
-        """
-        UPDATE users
-        SET status = ?
-        WHERE user_id = ?
-        """,
-        (
-            status,
-            user_id
+        cursor.execute(
+            """
+            UPDATE users
+            SET status = ?
+            WHERE user_id = ?
+            """,
+            (
+                status,
+                user_id
+            )
         )
-    )
 
 
-    connection.commit()
+        connection.commit()
 
 
-    connection.close()
+        return True
 
+
+
+    except Exception:
+
+
+        connection.rollback()
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()
 
 
 # ==========================================================
@@ -229,6 +250,10 @@ def update_last_seen(
 ):
     """
     Updates user's last seen time.
+
+    Returns:
+        True  - if update was successful
+        False - if an error occurred
     """
 
 
@@ -237,25 +262,42 @@ def update_last_seen(
     cursor = connection.cursor()
 
 
+    try:
 
-    cursor.execute(
-        """
-        UPDATE users
-        SET last_seen = ?
-        WHERE user_id = ?
-        """,
-        (
-            last_seen,
-            user_id
+        cursor.execute(
+            """
+            UPDATE users
+            SET last_seen = ?
+            WHERE user_id = ?
+            """,
+            (
+                last_seen,
+                user_id
+            )
         )
-    )
 
 
-    connection.commit()
+        connection.commit()
 
 
-    connection.close()
+        return True
 
+
+
+    except Exception:
+
+
+        connection.rollback()
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()
 
 
 # ==========================================================

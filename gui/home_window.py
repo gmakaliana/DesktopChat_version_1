@@ -19,9 +19,6 @@ import tkinter as tk
 from tkinter import ttk
 
 
-from datetime import datetime
-
-
 from modules.contacts.contacts import (
     get_user_contacts
 )
@@ -37,9 +34,8 @@ from gui.contacts_window import (
 )
 
 
-from database.queries import (
-    update_user_status,
-    update_last_seen
+from modules.users.status import (
+    set_offline
 )
 
 
@@ -51,7 +47,6 @@ from utils.window_utils import (
 
 from utils.gui_theme import (
     BACKGROUND,
-    TITLE_FONT,
     NORMAL_FONT
 )
 
@@ -71,26 +66,14 @@ def logout(
 
     Actions:
     - Change status to Offline.
-    - Save last seen.
+    - Update last seen.
     - Close home window.
-    - Return to login.
+    - Return to login window.
     """
 
 
-    current_time = datetime.now().strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-
-    update_user_status(
-        user["user_id"],
-        "Offline"
-    )
-
-
-    update_last_seen(
-        user["user_id"],
-        current_time
+    set_offline(
+        user["user_id"]
     )
 
 
@@ -126,17 +109,21 @@ def load_contacts(
     contact_objects.clear()
 
 
+
     contacts = get_user_contacts(
         current_user["user_id"]
     )
 
 
+
     if not contacts:
+
 
         contacts_list.insert(
             tk.END,
             "No contacts"
         )
+
 
         return
 
@@ -145,20 +132,17 @@ def load_contacts(
     for contact in contacts:
 
 
-        # Save complete contact information
-
         contact_objects.append(
             contact
         )
 
-
-        # Display friendly text only
 
         contacts_list.insert(
             tk.END,
             f"{contact['username']} "
             f"({contact['full_name']})"
         )
+
 
 
 # ==========================================================
@@ -192,8 +176,6 @@ def open_selected_chat(
 
 
 
-    # Ignore empty list message
-
     if contact == "No contacts":
 
         return
@@ -217,14 +199,8 @@ def open_home_window(
     login_window
 ):
     """
-    Opens main application window.
+    Opens the main application window.
     """
-
-
-    update_user_status(
-        user["user_id"],
-        "Online"
-    )
 
 
 
@@ -246,6 +222,7 @@ def open_home_window(
     )
 
 
+
     window.configure(
         background=BACKGROUND
     )
@@ -259,6 +236,10 @@ def open_home_window(
     )
 
 
+
+    # ======================================================
+    # WINDOW CLOSE EVENT
+    # ======================================================
 
     window.protocol(
         "WM_DELETE_WINDOW",
@@ -308,7 +289,10 @@ def open_home_window(
 
 
 
-    # Manage Contacts Button
+    # ======================================================
+    # CONTACT MANAGEMENT BUTTON
+    # ======================================================
+
 
     contacts_button = ttk.Button(
         header,
@@ -327,6 +311,11 @@ def open_home_window(
         padx=10
     )
 
+
+
+    # ======================================================
+    # LOGOUT BUTTON
+    # ======================================================
 
 
     logout_button = ttk.Button(
@@ -391,13 +380,17 @@ def open_home_window(
         width=30
     )
 
-    contact_objects = []
+
 
     contacts_list.pack(
         fill="y",
         padx=10,
         pady=10
     )
+
+
+
+    contact_objects = []
 
 
 
@@ -424,7 +417,7 @@ def open_home_window(
 
 
     # ======================================================
-    # CHAT INFORMATION AREA
+    # CHAT AREA
     # ======================================================
 
 
@@ -451,6 +444,7 @@ def open_home_window(
         font=NORMAL_FONT,
         bg=BACKGROUND
     )
+
 
 
     message.pack(

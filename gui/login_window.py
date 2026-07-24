@@ -35,7 +35,7 @@ from utils.gui_theme import (
     NORMAL_FONT
 )
 
-
+from modules.users.status import set_online
 
 # ==========================================================
 # LOGIN ACTION
@@ -48,6 +48,12 @@ def login_action(
 ):
     """
     Handles login button click.
+
+    Flow:
+    1. Get credentials.
+    2. Authenticate user.
+    3. Set user status Online.
+    4. Open Home Window.
     """
 
 
@@ -68,6 +74,34 @@ def login_action(
 
 
 
+        # --------------------------------------------------
+        # Update user presence
+        # --------------------------------------------------
+
+        status_updated = set_online(
+            result["user_id"]
+        )
+
+
+
+        if not status_updated:
+
+
+            messagebox.showerror(
+                "Login Error",
+                "Could not update user status.",
+                parent=window
+            )
+
+
+            return
+
+
+
+        # --------------------------------------------------
+        # Login successful message
+        # --------------------------------------------------
+
         messagebox.showinfo(
             "Login Successful",
             f"Welcome {result['full_name']}",
@@ -76,7 +110,9 @@ def login_action(
 
 
 
+        # --------------------------------------------------
         # Clear credentials
+        # --------------------------------------------------
 
         username_entry.delete(
             0,
@@ -91,11 +127,19 @@ def login_action(
 
 
 
+        # --------------------------------------------------
         # Hide login window
+        # Login window remains alive
+        # so logout can return here.
+        # --------------------------------------------------
 
         window.withdraw()
 
 
+
+        # --------------------------------------------------
+        # Open Home Window
+        # --------------------------------------------------
 
         from gui.home_window import open_home_window
 
@@ -110,13 +154,12 @@ def login_action(
     else:
 
 
+
         messagebox.showerror(
             "Login Failed",
             result,
             parent=window
         )
-
-
 
 # ==========================================================
 # REGISTER ACTION
