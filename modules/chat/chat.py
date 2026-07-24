@@ -1,15 +1,16 @@
 """
 Chat Management Module
 
-Responsible for chat message operations.
+Responsible for chat operations.
 
 Responsibilities:
-- Send messages.
-- Retrieve conversations.
-- Mark messages as read.
+- Sending messages.
+- Loading chat history.
+- Formatting messages.
+- Handling timestamps.
 
-Database operations are handled by:
-    database/queries.py
+GUI should not communicate directly
+with database queries.
 """
 
 
@@ -25,6 +26,25 @@ from database.queries import (
 
 
 # ==========================================================
+# GET CURRENT TIME
+# ==========================================================
+
+def get_current_time():
+    """
+    Returns current date and time.
+
+    Format:
+    YYYY-MM-DD HH:MM:SS
+    """
+
+
+    return datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+
+
+# ==========================================================
 # SEND MESSAGE
 # ==========================================================
 
@@ -34,104 +54,67 @@ def send_chat_message(
     message
 ):
     """
-    Sends a text message.
+    Sends and saves a chat message.
 
     Args:
         sender_id:
-            User sending the message.
+            User sending message.
 
         receiver_id:
-            User receiving the message.
+            User receiving message.
 
         message:
             Text content.
 
 
     Returns:
-        tuple:
-            (True, message)
-            (False, error)
+        True/False
     """
 
-
-
-    # ======================================================
-    # VALIDATION
-    # ======================================================
-
-    if message.strip() == "":
-
-        return False, (
-            "Message cannot be empty"
-        )
-
-
-
-    # Remove unnecessary spaces
 
     message = message.strip()
 
 
 
-    # ======================================================
-    # SAVE MESSAGE
-    # ======================================================
+    if not message:
 
-    sent_time = datetime.now().strftime(
-        "%Y-%m-%d %H:%M:%S"
+        return False
+
+
+
+    sent_at = get_current_time()
+
+
+
+    success = save_message(
+        sender_id,
+        receiver_id,
+        message,
+        sent_at
     )
 
 
 
-    try:
+    return success
 
 
-        save_message(
-            sender_id,
-            receiver_id,
-            message,
-            sent_time
-        )
-
-
-        return True, (
-            "Message sent"
-        )
-
-
-
-    except Exception:
-
-
-        return False, (
-            "Unable to send message"
-        )
 
 
 
 # ==========================================================
-# GET CONVERSATION
+# LOAD CHAT HISTORY
 # ==========================================================
 
-def get_chat_history(
+def load_chat_history(
     user_one,
     user_two
 ):
     """
-    Retrieves messages between two users.
-
-    Args:
-        user_one:
-            First user ID.
-
-        user_two:
-            Second user ID.
-
+    Loads previous conversation.
 
     Returns:
-        List of messages.
+        List of messages
     """
-
 
 
     messages = get_messages(
@@ -140,58 +123,142 @@ def get_chat_history(
     )
 
 
+
     return messages
 
 
 
+
+
 # ==========================================================
-# MARK MESSAGE AS READ
+# FORMAT MESSAGE FOR DISPLAY
 # ==========================================================
 
-def read_message(
+def format_message(
+    message,
+    current_user_id
+):
+    """
+    Converts database message row
+    into display text.
+
+
+    Example:
+
+    George [10:30]
+    Hello
+
+
+    """
+
+
+    sender = message["sender_name"]
+
+
+    timestamp = message["sent_at"]
+
+
+
+    # Only show time part
+
+    try:
+
+        time = datetime.strptime(
+            timestamp,
+            "%Y-%m-%d %H:%M:%S"
+        ).strftime(
+            "%H:%M"
+        )
+
+
+    except Exception:
+
+
+        time = timestamp
+
+
+
+    if message["sender_id"] == current_user_id:
+
+
+        prefix = "You"
+
+
+    else:
+
+
+        prefix = sender
+
+
+
+    formatted = (
+
+        f"{prefix} [{time}]\n"
+
+        f"{message['message']}\n\n"
+
+    )
+
+
+
+    return formatted
+
+
+
+
+
+# ==========================================================
+# MARK MESSAGE READ
+# ==========================================================
+
+def mark_as_read(
     chat_id
 ):
     """
     Marks a message as read.
-
-    Args:
-        chat_id:
-            Message identifier.
     """
 
 
-    mark_message_read(
+    return mark_message_read(
         chat_id
     )
 
 
 
 # ==========================================================
-# FORMAT MESSAGE DISPLAY
+# LOAD FORMATTED CHAT
 # ==========================================================
 
-def format_message(
-    message
+def get_display_messages(
+    current_user_id,
+    other_user_id
 ):
     """
-    Formats database message data
-    for displaying in GUI.
-
-    Args:
-        message:
-            SQLite row.
-
-
-    Returns:
-        Display string.
+    Loads chat history and formats
+    messages ready for GUI display.
     """
 
 
-
-    formatted = (
-        f"{message['sent_at']}\n"
-        f"{message['message']}"
+    messages = load_chat_history(
+        current_user_id,
+        other_user_id
     )
 
 
-    return formatted
+    formatted_messages = []
+
+
+
+    for message in messages:
+
+
+        formatted_messages.append(
+            format_message(
+                message,
+                current_user_id
+            )
+        )
+
+
+
+    return formatted_messages

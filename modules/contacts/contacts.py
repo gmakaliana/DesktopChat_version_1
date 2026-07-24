@@ -1,49 +1,66 @@
 """
-Contact Management Module
+Contacts Management Module
 
-Responsible for managing user contacts.
+Responsible for contact operations.
 
 Responsibilities:
-- Add contacts.
-- Remove contacts.
-- Retrieve contacts.
 - Search users.
+- Add contacts.
+- Load user contacts.
 
-Database operations are handled by:
-    database/queries.py
+GUI should not communicate directly
+with database queries.
 """
 
 
 from database.queries import (
+    search_users,
     add_contact,
-    get_contacts,
-    search_users
+    get_contacts
 )
 
 
 
 # ==========================================================
-# SEARCH AVAILABLE USERS
+# SEARCH USERS
 # ==========================================================
 
-def search_available_users(keyword):
+def search_available_users(
+    keyword,
+    current_user_id
+):
     """
-    Searches registered users.
+    Searches users available to add.
 
-    Used when a user wants to
-    find someone to add.
+    Searches:
 
-    Args:
-        keyword:
-            Username or full name.
+    - Username
+    - Full name
+
+
+    Excludes:
+
+    - Current user
+
 
     Returns:
-        List of users.
+        List of users
     """
+
+
+    keyword = keyword.strip()
+
+
+
+    if not keyword:
+
+        return []
+
 
 
     users = search_users(
-        keyword
+        keyword,
+        current_user_id
     )
 
 
@@ -51,124 +68,102 @@ def search_available_users(keyword):
 
 
 
+
+
 # ==========================================================
-# ADD CONTACT
+# ADD NEW CONTACT
 # ==========================================================
 
 def add_new_contact(
-    user_id,
+    current_user_id,
     friend_id
 ):
     """
-    Adds another user as a contact.
-
-    Args:
-        user_id:
-            Current logged-in user.
-
-        friend_id:
-            User being added.
+    Adds a new contact.
 
     Returns:
-        Success status and message.
+
+        True:
+            Contact added
+
+        False:
+            Failed or already exists
     """
 
 
-
-    # ------------------------------------------------------
-    # Prevent adding yourself
-    # ------------------------------------------------------
-
-    if user_id == friend_id:
-
-        return False, (
-            "You cannot add yourself "
-            "as a contact"
-        )
+    success = add_contact(
+        current_user_id,
+        friend_id
+    )
 
 
 
-    try:
+    return success
 
 
-        add_contact(
-            user_id,
-            friend_id
-        )
-
-
-        return True, (
-            "Contact added successfully"
-        )
-
-
-
-    except Exception:
-
-
-        return False, (
-            "Unable to add contact"
-        )
 
 
 
 # ==========================================================
-# GET USER CONTACTS
+# GET CONTACT LIST
 # ==========================================================
 
-def get_user_contacts(user_id):
+def get_user_contacts(
+    user_id
+):
     """
-    Returns contacts belonging to a user.
+    Returns user's contacts.
 
-    Converts sqlite rows into
-    dictionary objects for GUI use.
+    Used by:
+        home_window.py
     """
 
 
-    rows = get_contacts(user_id)
-
-
-    contacts = []
-
-
-    for row in rows:
-
-        contacts.append(
-            {
-                "user_id": row["user_id"],
-                "username": row["username"],
-                "full_name": row["full_name"],
-                "profile_picture": row["profile_picture"]
-            }
-        )
+    contacts = get_contacts(
+        user_id
+    )
 
 
     return contacts
 
 
 
+
+
 # ==========================================================
-# REMOVE CONTACT
+# FORMAT USER SEARCH RESULT
 # ==========================================================
 
-def remove_contact(
-    user_id,
-    friend_id
+def format_user_result(
+    user
 ):
     """
-    Removes a contact.
-
-    Currently requires a database
-    delete query.
-
-    Future implementation:
-
-        database/queries.py
-        delete_contact()
-
+    Formats user information
+    for displaying in GUI.
     """
 
 
-    return False, (
-        "Remove contact not implemented yet"
+    status = user["status"]
+
+
+
+    if status == "Online":
+
+        icon = "🟢"
+
+
+    else:
+
+        icon = "⚪"
+
+
+
+    return (
+
+        f"{icon} "
+
+        f"{user['full_name']} "
+
+        f"({user['username']})"
+
     )

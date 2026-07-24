@@ -1,15 +1,12 @@
 """
 Contacts Window
 
-Provides the graphical interface for
-managing user contacts.
-
-Responsibilities:
-- Search users.
+Allows users to:
+- Search for users.
 - Add contacts.
-- Display current contacts.
+- View search results.
 
-Business logic is handled by:
+Business logic:
     modules/contacts/contacts.py
 """
 
@@ -18,17 +15,19 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 
+
 from modules.contacts.contacts import (
     search_available_users,
-    add_new_contact,
-    get_user_contacts
+    add_new_contact
 )
+
 
 
 from utils.window_utils import (
     center_window,
     close_window
 )
+
 
 
 from utils.gui_theme import (
@@ -39,38 +38,24 @@ from utils.gui_theme import (
 
 
 
+
+
 # ==========================================================
-# SEARCH USERS ACTION
+# SEARCH USERS
 # ==========================================================
 
 def search_action(
     search_entry,
     results_list,
+    results_objects,
     current_user
 ):
     """
-    Searches registered users.
+    Searches users.
     """
 
 
     keyword = search_entry.get().strip()
-
-
-
-    if keyword == "":
-
-        messagebox.showwarning(
-            "Search",
-            "Enter username or name",
-        )
-
-        return
-
-
-
-    users = search_available_users(
-        keyword
-    )
 
 
 
@@ -80,38 +65,83 @@ def search_action(
     )
 
 
+    results_objects.clear()
+
+
+
+    users = search_available_users(
+        keyword,
+        current_user["user_id"]
+    )
+
+
+
+    if not users:
+
+
+        results_list.insert(
+            tk.END,
+            "No users found"
+        )
+
+
+        return
+
+
+
 
     for user in users:
 
 
-        # Prevent showing yourself
+        results_objects.append(
+            user
+        )
 
-        if user["user_id"] != current_user["user_id"]:
 
 
-            results_list.insert(
-                tk.END,
-                (
-                    f"{user['user_id']} - "
-                    f"{user['username']} "
-                    f"({user['full_name']})"
-                )
-            )
+        if user["status"] == "Online":
+
+            icon = "🟢"
+
+        else:
+
+            icon = "⚪"
+
+
+
+        display = (
+
+            f"{icon} "
+
+            f"{user['full_name']} "
+
+            f"({user['username']})"
+
+        )
+
+
+        results_list.insert(
+            tk.END,
+            display
+        )
+
+
 
 
 
 # ==========================================================
-# ADD CONTACT ACTION
+# ADD CONTACT
 # ==========================================================
 
 def add_contact_action(
     results_list,
+    results_objects,
     current_user
 ):
     """
-    Adds selected user as contact.
+    Adds selected search result
+    as contact.
     """
-
 
 
     selected = results_list.curselection()
@@ -120,99 +150,48 @@ def add_contact_action(
 
     if not selected:
 
+
         messagebox.showwarning(
-            "Add Contact",
-            "Select a user first"
+            "No Selection",
+            "Please select a user first."
         )
+
 
         return
 
 
 
-    data = results_list.get(
+    user = results_objects[
         selected[0]
-    )
+    ]
 
 
 
-    # Extract user ID
-
-    friend_id = int(
-        data.split("-")[0]
-    )
-
-
-
-    success, message = add_new_contact(
+    success = add_new_contact(
         current_user["user_id"],
-        friend_id
+        user["user_id"]
     )
 
 
 
     if success:
 
+
         messagebox.showinfo(
             "Success",
-            message
+            f"{user['full_name']} added as contact."
         )
+
 
     else:
 
+
         messagebox.showerror(
-            "Error",
-            message
+            "Failed",
+            "User is already a contact."
         )
 
 
-
-# ==========================================================
-# LOAD CONTACTS
-# ==========================================================
-
-def load_contacts(
-    contacts_list,
-    current_user
-):
-    """
-    Displays existing contacts.
-    """
-
-
-    contacts_list.delete(
-        0,
-        tk.END
-    )
-
-
-
-    contacts = get_user_contacts(
-        current_user["user_id"]
-    )
-
-
-
-    if not contacts:
-
-        contacts_list.insert(
-            tk.END,
-            "No contacts"
-        )
-
-        return
-
-
-
-    for contact in contacts:
-
-
-        contacts_list.insert(
-            tk.END,
-            (
-                f"{contact['username']} "
-                f"({contact['full_name']})"
-            )
-        )
 
 
 
@@ -225,14 +204,7 @@ def open_contacts_window(
     current_user
 ):
     """
-    Opens contact management window.
-
-    Args:
-        parent:
-            Home window.
-
-        current_user:
-            Logged-in user.
+    Opens contacts management window.
     """
 
 
@@ -260,13 +232,11 @@ def open_contacts_window(
 
     center_window(
         window,
-        600,
+        550,
         500
     )
 
 
-
-    # Keep above home window
 
     window.transient(
         parent
@@ -290,16 +260,17 @@ def open_contacts_window(
     # TITLE
     # ======================================================
 
+
     title = tk.Label(
         window,
-        text="Manage Contacts",
+        text="Search Users",
         font=TITLE_FONT,
         bg=BACKGROUND
     )
 
 
     title.pack(
-        pady=20
+        pady=(20,15)
     )
 
 
@@ -308,13 +279,15 @@ def open_contacts_window(
     # SEARCH AREA
     # ======================================================
 
+
     search_frame = ttk.Frame(
         window
     )
 
 
     search_frame.pack(
-        pady=10
+        fill="x",
+        padx=30
     )
 
 
@@ -326,8 +299,27 @@ def open_contacts_window(
 
 
     search_entry.pack(
-        side="left",
-        padx=5
+        side="left"
+    )
+
+
+
+    # Results storage
+
+    results_objects = []
+
+
+
+    results_list = tk.Listbox(
+        window,
+        width=55,
+        height=15
+    )
+
+
+    results_list.pack(
+        padx=30,
+        pady=20
     )
 
 
@@ -340,61 +332,32 @@ def open_contacts_window(
         search_action(
             search_entry,
             results_list,
+            results_objects,
             current_user
         )
     )
 
 
     search_button.pack(
-        side="left"
+        side="right",
+        padx=10
     )
 
 
 
     # ======================================================
-    # SEARCH RESULTS
+    # ADD CONTACT BUTTON
     # ======================================================
 
-    results_frame = ttk.LabelFrame(
-        window,
-        text="Search Results"
-    )
-
-
-    results_frame.pack(
-        fill="both",
-        expand=True,
-        padx=20,
-        pady=10
-    )
-
-
-
-    results_list = tk.Listbox(
-        results_frame
-    )
-
-
-    results_list.pack(
-        fill="both",
-        expand=True,
-        padx=10,
-        pady=10
-    )
-
-
-
-    # ======================================================
-    # ADD BUTTON
-    # ======================================================
 
     add_button = ttk.Button(
         window,
-        text="Add Selected Contact",
+        text="Add Contact",
         command=lambda:
 
         add_contact_action(
             results_list,
+            results_objects,
             current_user
         )
     )
@@ -407,39 +370,22 @@ def open_contacts_window(
 
 
     # ======================================================
-    # CURRENT CONTACTS
+    # ENTER KEY SEARCH
     # ======================================================
 
-    contacts_frame = ttk.LabelFrame(
-        window,
-        text="My Contacts"
-    )
 
+    search_entry.bind(
+        "<Return>",
+        lambda event:
 
-    contacts_frame.pack(
-        fill="both",
-        expand=True,
-        padx=20,
-        pady=10
-    )
-
-
-
-    contacts_list = tk.Listbox(
-        contacts_frame
-    )
-
-
-    contacts_list.pack(
-        fill="both",
-        expand=True,
-        padx=10,
-        pady=10
+        search_action(
+            search_entry,
+            results_list,
+            results_objects,
+            current_user
+        )
     )
 
 
 
-    load_contacts(
-        contacts_list,
-        current_user
-    )
+    search_entry.focus()

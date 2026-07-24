@@ -1,26 +1,26 @@
 """
 Chat Window
 
-Provides the graphical interface for
-one-to-one messaging.
+Displays conversation between two users.
 
 Responsibilities:
 - Display chat history.
-- Send text messages.
-- Refresh conversation.
+- Send messages.
+- Refresh messages.
+- Handle message input.
 
-Business logic is handled by:
+Business logic:
     modules/chat/chat.py
 """
 
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 
 from modules.chat.chat import (
     send_chat_message,
-    get_chat_history
+    get_display_messages
 )
 
 
@@ -43,30 +43,28 @@ from utils.gui_theme import (
 # ==========================================================
 
 def load_messages(
-    messages_box,
+    chat_box,
     current_user,
     selected_user
 ):
     """
-    Loads conversation history
-    between two users.
+    Loads chat history into display area.
     """
 
 
-
-    messages_box.config(
+    chat_box.config(
         state="normal"
     )
 
 
-    messages_box.delete(
+    chat_box.delete(
         "1.0",
         tk.END
     )
 
 
 
-    messages = get_chat_history(
+    messages = get_display_messages(
         current_user["user_id"],
         selected_user["user_id"]
     )
@@ -76,45 +74,40 @@ def load_messages(
     for message in messages:
 
 
-        if message["sender_id"] == current_user["user_id"]:
-
-            sender = "You"
-
-        else:
-
-            sender = selected_user["full_name"]
-
-
-
-        messages_box.insert(
+        chat_box.insert(
             tk.END,
-            (
-                f"{sender}\n"
-                f"{message['message']}\n"
-                f"{message['sent_at']}\n\n"
-            )
+            message
         )
 
 
 
-    messages_box.config(
+    chat_box.config(
         state="disabled"
     )
 
 
+    # Auto scroll
+
+    chat_box.see(
+        tk.END
+    )
+
+
+
+
 
 # ==========================================================
-# SEND MESSAGE ACTION
+# SEND MESSAGE
 # ==========================================================
 
 def send_message_action(
     message_entry,
-    messages_box,
+    chat_box,
     current_user,
     selected_user
 ):
     """
-    Sends a new message.
+    Sends a message.
     """
 
 
@@ -122,7 +115,13 @@ def send_message_action(
 
 
 
-    success, result = send_chat_message(
+    if not message:
+
+        return
+
+
+
+    success = send_chat_message(
         current_user["user_id"],
         selected_user["user_id"],
         message
@@ -133,27 +132,24 @@ def send_message_action(
     if success:
 
 
+        # Clear input box
+
         message_entry.delete(
             0,
             tk.END
         )
 
 
+
+        # Reload chat
+
         load_messages(
-            messages_box,
+            chat_box,
             current_user,
             selected_user
         )
 
 
-
-    else:
-
-
-        messagebox.showerror(
-            "Message Error",
-            result
-        )
 
 
 
@@ -174,7 +170,7 @@ def open_chat_window(
             Home window.
 
         current_user:
-            Logged-in user.
+            Logged in user.
 
         selected_user:
             Contact being chatted with.
@@ -193,10 +189,12 @@ def open_chat_window(
     )
 
 
+
     window.resizable(
         True,
         True
     )
+
 
 
     window.configure(
@@ -218,7 +216,6 @@ def open_chat_window(
     )
 
 
-
     window.grab_set()
 
 
@@ -236,6 +233,7 @@ def open_chat_window(
     # HEADER
     # ======================================================
 
+
     title = tk.Label(
         window,
         text=(
@@ -248,34 +246,37 @@ def open_chat_window(
 
 
     title.pack(
-        pady=20
+        pady=(20,10)
     )
 
 
 
     # ======================================================
-    # MESSAGE DISPLAY
+    # CHAT DISPLAY
     # ======================================================
 
-    messages_box = tk.Text(
+
+    chat_box = tk.Text(
         window,
         wrap="word",
-        state="disabled"
+        state="disabled",
+        font=NORMAL_FONT
     )
 
 
-    messages_box.pack(
+    chat_box.pack(
         fill="both",
         expand=True,
-        padx=20,
+        padx=15,
         pady=10
     )
 
 
 
     # ======================================================
-    # MESSAGE INPUT
+    # MESSAGE INPUT AREA
     # ======================================================
+
 
     input_frame = ttk.Frame(
         window
@@ -284,7 +285,7 @@ def open_chat_window(
 
     input_frame.pack(
         fill="x",
-        padx=20,
+        padx=15,
         pady=10
     )
 
@@ -310,11 +311,12 @@ def open_chat_window(
 
         send_message_action(
             message_entry,
-            messages_box,
+            chat_box,
             current_user,
             selected_user
         )
     )
+
 
 
     send_button.pack(
@@ -325,11 +327,35 @@ def open_chat_window(
 
 
     # ======================================================
-    # INITIAL MESSAGE LOAD
+    # ENTER KEY SEND
     # ======================================================
 
+
+    message_entry.bind(
+        "<Return>",
+        lambda event:
+
+        send_message_action(
+            message_entry,
+            chat_box,
+            current_user,
+            selected_user
+        )
+    )
+
+
+
+    # ======================================================
+    # INITIAL LOAD
+    # ======================================================
+
+
     load_messages(
-        messages_box,
+        chat_box,
         current_user,
         selected_user
     )
+
+
+
+    message_entry.focus()

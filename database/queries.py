@@ -1,3 +1,5 @@
+
+
 """
 Database Query Module
 
@@ -25,13 +27,13 @@ from database.db import get_connection
 # ==========================================================
 
 
+# ==========================================================
+# GET USER BY USERNAME
+# ==========================================================
+
 def get_user_by_username(username):
     """
     Retrieves a user using username.
-
-    Args:
-        username:
-            Username to search.
 
     Returns:
         User row or None
@@ -47,7 +49,9 @@ def get_user_by_username(username):
         """
         SELECT *
         FROM users
+
         WHERE username = ?
+
         """,
         (
             username,
@@ -72,6 +76,9 @@ def get_user_by_username(username):
 def get_user_by_id(user_id):
     """
     Retrieves user using user ID.
+
+    Returns:
+        User row or None
     """
 
 
@@ -83,8 +90,11 @@ def get_user_by_id(user_id):
     cursor.execute(
         """
         SELECT *
+
         FROM users
+
         WHERE user_id = ?
+
         """,
         (
             user_id,
@@ -116,8 +126,9 @@ def create_user(
     Creates a new user account.
 
     Returns:
-        True if successful
-        False if failed
+
+        True  - successful
+        False - failed
     """
 
 
@@ -146,6 +157,7 @@ def create_user(
                 ?,
                 ?
             )
+
             """,
             (
                 username,
@@ -163,10 +175,16 @@ def create_user(
 
 
 
-    except Exception:
+    except Exception as error:
 
 
         connection.rollback()
+
+
+        print(
+            "Create user error:",
+            error
+        )
 
 
         return False
@@ -189,11 +207,12 @@ def update_user_status(
     status
 ):
     """
-    Updates online/offline status.
+    Updates user's online status.
 
     Returns:
-        True  - if update was successful
-        False - if an error occurred
+
+        True  - successful
+        False - failed
     """
 
 
@@ -204,11 +223,15 @@ def update_user_status(
 
     try:
 
+
         cursor.execute(
             """
             UPDATE users
+
             SET status = ?
+
             WHERE user_id = ?
+
             """,
             (
                 status,
@@ -224,10 +247,16 @@ def update_user_status(
 
 
 
-    except Exception:
+    except Exception as error:
 
 
         connection.rollback()
+
+
+        print(
+            "update_user_status error:",
+            error
+        )
 
 
         return False
@@ -238,6 +267,7 @@ def update_user_status(
 
 
         connection.close()
+
 
 
 # ==========================================================
@@ -252,8 +282,9 @@ def update_last_seen(
     Updates user's last seen time.
 
     Returns:
-        True  - if update was successful
-        False - if an error occurred
+
+        True  - successful
+        False - failed
     """
 
 
@@ -264,11 +295,15 @@ def update_last_seen(
 
     try:
 
+
         cursor.execute(
             """
             UPDATE users
+
             SET last_seen = ?
+
             WHERE user_id = ?
+
             """,
             (
                 last_seen,
@@ -284,10 +319,16 @@ def update_last_seen(
 
 
 
-    except Exception:
+    except Exception as error:
 
 
         connection.rollback()
+
+
+        print(
+            "update_last_seen error:",
+            error
+        )
 
 
         return False
@@ -301,14 +342,29 @@ def update_last_seen(
 
 
 # ==========================================================
-# SEARCH USERS
+# CONTACT QUERIES
 # ==========================================================
 
-def search_users(keyword):
-    """
-    Searches users by username or full name.
 
-    Used when adding contacts.
+# ==========================================================
+# SEARCH USERS FOR ADDING CONTACTS
+# ==========================================================
+
+def search_users(
+    keyword,
+    current_user_id
+):
+    """
+    Searches users by:
+
+    - Username
+    - Full name
+
+    Excludes:
+    - Current logged-in user
+
+    Returns:
+        List of users
     """
 
 
@@ -320,18 +376,41 @@ def search_users(keyword):
 
     cursor.execute(
         """
-        SELECT *
+        SELECT
+
+            user_id,
+            username,
+            full_name,
+            status,
+            last_seen
+
+
         FROM users
 
-        WHERE username LIKE ?
-        OR full_name LIKE ?
+
+        WHERE
+
+        (
+            username LIKE ?
+
+            OR
+
+            full_name LIKE ?
+        )
+
+
+        AND user_id != ?
+
+
+        ORDER BY full_name ASC
+
         """,
         (
             f"%{keyword}%",
-            f"%{keyword}%"
+            f"%{keyword}%",
+            current_user_id
         )
     )
-
 
 
     users = cursor.fetchall()
@@ -345,16 +424,20 @@ def search_users(keyword):
 
 
 # ==========================================================
-# CONTACT QUERIES
+# CHECK CONTACT EXISTS
 # ==========================================================
 
-
-def add_contact(
+def contact_exists(
     user_id,
     friend_id
 ):
     """
-    Adds a new contact relationship.
+    Checks if contact relationship exists.
+
+    Returns:
+
+        True  - exists
+        False - does not exist
     """
 
 
@@ -366,17 +449,18 @@ def add_contact(
 
     cursor.execute(
         """
-        INSERT INTO contacts
-        (
-            user_id,
-            friend_id
-        )
+        SELECT contact_id
 
-        VALUES
-        (
-            ?,
-            ?
-        )
+        FROM contacts
+
+        WHERE
+
+        user_id = ?
+
+        AND
+
+        friend_id = ?
+
         """,
         (
             user_id,
@@ -385,21 +469,278 @@ def add_contact(
     )
 
 
-
-    connection.commit()
+    result = cursor.fetchone()
 
 
     connection.close()
 
 
 
+    return result is not None
+
+
+
 # ==========================================================
-# GET CONTACTS
+# ADD TWO-WAY CONTACT
 # ==========================================================
 
-def get_contacts(user_id):
+def add_contact(
+    user_id,
+    friend_id
+):
     """
-    Returns all contacts belonging to a user.
+    Creates a two-way contact relationship.
+
+    Example:
+
+        User A adds User B
+
+
+        Database:
+
+        A -> B
+        B -> A
+
+
+    Returns:
+
+        True  - successful
+        False - failed
+    """
+
+
+    # Cannot add yourself
+
+    if user_id == friend_id:
+
+        return False
+
+
+
+    # Prevent duplicates
+
+    if contact_exists(
+        user_id,
+        friend_id
+    ):
+
+
+        return False
+
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    try:
+
+
+        # --------------------------------------------------
+        # First direction
+        # User -> Friend
+        # --------------------------------------------------
+
+        cursor.execute(
+            """
+            INSERT INTO contacts
+            (
+                user_id,
+                friend_id
+            )
+
+            VALUES
+            (
+                ?,
+                ?
+            )
+
+            """,
+            (
+                user_id,
+                friend_id
+            )
+        )
+
+
+
+        # --------------------------------------------------
+        # Reverse direction
+        # Friend -> User
+        # --------------------------------------------------
+
+        cursor.execute(
+            """
+            INSERT INTO contacts
+            (
+                user_id,
+                friend_id
+            )
+
+            VALUES
+            (
+                ?,
+                ?
+            )
+
+            """,
+            (
+                friend_id,
+                user_id
+            )
+        )
+
+
+
+        connection.commit()
+
+
+        return True
+
+
+
+    except Exception as error:
+
+
+        connection.rollback()
+
+
+        print(
+            "Add contact error:",
+            error
+        )
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()
+
+
+
+# ==========================================================
+# REMOVE CONTACT
+# ==========================================================
+
+def remove_contact(
+    user_id,
+    friend_id
+):
+    """
+    Removes both sides of friendship.
+
+    Deletes:
+
+        User A -> User B
+        User B -> User A
+
+
+    Returns:
+
+        True  - successful
+        False - failed
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    try:
+
+
+        cursor.execute(
+            """
+            DELETE FROM contacts
+
+            WHERE
+
+            (
+                user_id = ?
+
+                AND
+
+                friend_id = ?
+            )
+
+            OR
+
+            (
+                user_id = ?
+
+                AND
+
+                friend_id = ?
+            )
+
+            """,
+            (
+                user_id,
+                friend_id,
+                friend_id,
+                user_id
+            )
+        )
+
+
+        connection.commit()
+
+
+        return True
+
+
+
+    except Exception as error:
+
+
+        connection.rollback()
+
+
+        print(
+            "Remove contact error:",
+            error
+        )
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()
+
+
+
+# ==========================================================
+# GET CONTACTS WITH STATUS
+# ==========================================================
+
+def get_contacts(
+    user_id
+):
+    """
+    Returns all user's contacts.
+
+    Includes:
+
+    - User ID
+    - Username
+    - Full name
+    - Online/offline status
+    - Last seen
+
+
+    Returns:
+
+        List of sqlite rows
     """
 
 
@@ -411,14 +752,39 @@ def get_contacts(user_id):
 
     cursor.execute(
         """
-        SELECT users.*
+        SELECT
+
+
+            users.user_id,
+
+            users.username,
+
+            users.full_name,
+
+            users.status,
+
+            users.last_seen
+
+
 
         FROM contacts
 
+
+
         JOIN users
+
+
         ON contacts.friend_id = users.user_id
 
+
+
         WHERE contacts.user_id = ?
+
+
+
+        ORDER BY users.full_name ASC
+
+
         """,
         (
             user_id,
@@ -436,11 +802,14 @@ def get_contacts(user_id):
     return contacts
 
 
-
 # ==========================================================
 # CHAT QUERIES
 # ==========================================================
 
+
+# ==========================================================
+# SAVE MESSAGE
+# ==========================================================
 
 def save_message(
     sender_id,
@@ -449,7 +818,12 @@ def save_message(
     sent_at
 ):
     """
-    Saves a text message.
+    Saves a chat message.
+
+    Returns:
+
+        True  - successful
+        False - failed
     """
 
 
@@ -458,39 +832,65 @@ def save_message(
     cursor = connection.cursor()
 
 
+    try:
 
-    cursor.execute(
-        """
-        INSERT INTO chats
-        (
-            sender_id,
-            receiver_id,
-            message,
-            sent_at
+
+        cursor.execute(
+            """
+            INSERT INTO chats
+            (
+                sender_id,
+                receiver_id,
+                message,
+                sent_at
+            )
+
+
+            VALUES
+            (
+                ?,
+                ?,
+                ?,
+                ?
+            )
+
+            """,
+            (
+                sender_id,
+                receiver_id,
+                message,
+                sent_at
+            )
         )
 
-        VALUES
-        (
-            ?,
-            ?,
-            ?,
-            ?
+
+        connection.commit()
+
+
+        return True
+
+
+
+    except Exception as error:
+
+
+        connection.rollback()
+
+
+        print(
+            "Save message error:",
+            error
         )
-        """,
-        (
-            sender_id,
-            receiver_id,
-            message,
-            sent_at
-        )
-    )
+
+
+        return False
 
 
 
-    connection.commit()
+    finally:
 
 
-    connection.close()
+        connection.close()
 
 
 
@@ -504,6 +904,20 @@ def get_messages(
 ):
     """
     Retrieves conversation between two users.
+
+    Includes:
+
+    - Message ID
+    - Sender ID
+    - Receiver ID
+    - Message text
+    - Timestamp
+    - Sender name
+
+
+    Returns:
+
+        List of messages
     """
 
 
@@ -515,18 +929,73 @@ def get_messages(
 
     cursor.execute(
         """
-        SELECT *
+        SELECT
+
+
+            chats.chat_id,
+
+
+            chats.sender_id,
+
+
+            chats.receiver_id,
+
+
+            chats.message,
+
+
+            chats.sent_at,
+
+
+            chats.is_read,
+
+
+            users.full_name AS sender_name
+
+
 
         FROM chats
 
+
+
+        JOIN users
+
+
+
+        ON chats.sender_id = users.user_id
+
+
+
         WHERE
-        (sender_id = ? AND receiver_id = ?)
+
+
+        (
+            chats.sender_id = ?
+
+            AND
+
+            chats.receiver_id = ?
+        )
+
+
 
         OR
 
-        (sender_id = ? AND receiver_id = ?)
 
-        ORDER BY sent_at ASC
+
+        (
+            chats.sender_id = ?
+
+            AND
+
+            chats.receiver_id = ?
+        )
+
+
+
+        ORDER BY chats.sent_at ASC
+
+
         """,
         (
             user_one,
@@ -557,6 +1026,11 @@ def mark_message_read(
 ):
     """
     Marks a message as read.
+
+    Returns:
+
+        True  - successful
+        False - failed
     """
 
 
@@ -565,23 +1039,51 @@ def mark_message_read(
     cursor = connection.cursor()
 
 
+    try:
 
-    cursor.execute(
-        """
-        UPDATE chats
 
-        SET is_read = 1
+        cursor.execute(
+            """
+            UPDATE chats
 
-        WHERE chat_id = ?
-        """,
-        (
-            chat_id,
+
+            SET is_read = 1
+
+
+            WHERE chat_id = ?
+
+
+            """,
+            (
+                chat_id,
+            )
         )
-    )
+
+
+        connection.commit()
+
+
+        return True
 
 
 
-    connection.commit()
+    except Exception as error:
 
 
-    connection.close()
+        connection.rollback()
+
+
+        print(
+            "Mark message read error:",
+            error
+        )
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()

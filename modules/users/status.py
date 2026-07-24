@@ -1,28 +1,9 @@
-"""
-User Status Module
-
-Responsible for managing user presence information.
-
-Features:
-- Set user online status
-- Set user offline status
-- Update last seen time
-- Retrieve user status
-
-Database operations are handled through:
-    database/queries.py
-"""
-
-
 from datetime import datetime
-
 
 from database.queries import (
     update_user_status,
-    update_last_seen,
-    get_user_by_id
+    update_last_seen
 )
-
 
 
 # ==========================================================
@@ -39,29 +20,30 @@ def get_current_time():
     )
 
 
-
 # ==========================================================
 # SET USER ONLINE
 # ==========================================================
 
 def set_online(user_id):
     """
-    Changes user status to Online.
+    Sets user status to Online.
 
-    Args:
-        user_id:
-            Logged-in user ID.
+    Returns:
+        True if successful.
+        False otherwise.
     """
 
-
-    update_user_status(
+    status_success = update_user_status(
         user_id,
         "Online"
     )
 
+    last_seen_success = update_last_seen(
+        user_id,
+        get_current_time()
+    )
 
-    return True
-
+    return status_success and last_seen_success
 
 
 # ==========================================================
@@ -70,79 +52,40 @@ def set_online(user_id):
 
 def set_offline(user_id):
     """
-    Changes user status to Offline
-    and updates last seen time.
+    Sets user status to Offline.
+
+    Returns:
+        True if successful.
+        False otherwise.
     """
 
-
-    update_user_status(
+    status_success = update_user_status(
         user_id,
         "Offline"
     )
 
-
-    update_last_seen(
+    last_seen_success = update_last_seen(
         user_id,
         get_current_time()
     )
 
-
-    return True
-
+    return status_success and last_seen_success
 
 
 # ==========================================================
 # UPDATE LAST SEEN
 # ==========================================================
 
-def update_user_last_seen(user_id):
+def update_activity(user_id):
     """
-    Updates only last seen time.
+    Updates user's last activity time.
+
+    Returns:
+        True if successful.
+        False otherwise.
     """
 
-
-    update_last_seen(
+    return update_last_seen(
         user_id,
         get_current_time()
     )
-
-
-    return True
-
-
-
-# ==========================================================
-# GET USER STATUS
-# ==========================================================
-
-def get_status(user_id):
-    """
-    Returns current user status.
-
-    Example:
-
-    {
-        "status": "Online",
-        "last_seen": "2026-07-24 23:30:00"
-    }
-    """
-
-
-    user = get_user_by_id(
-        user_id
-    )
-
-
-    if user:
-
-
-        return {
-
-            "status": user["status"],
-
-            "last_seen": user["last_seen"]
-
-        }
-
-
-    return None

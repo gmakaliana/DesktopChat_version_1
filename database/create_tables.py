@@ -47,15 +47,27 @@ def create_tables():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS contacts (
+
             contact_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
             user_id INTEGER NOT NULL,
+
             friend_id INTEGER NOT NULL,
 
-            FOREIGN KEY (user_id)
+
+            UNIQUE(
+                user_id,
+                friend_id
+            ),
+
+
+            FOREIGN KEY(user_id)
                 REFERENCES users(user_id),
 
-            FOREIGN KEY (friend_id)
+
+            FOREIGN KEY(friend_id)
                 REFERENCES users(user_id)
+
         )
     """)
 
