@@ -94,6 +94,50 @@ def create_tables():
         )
     """)
 
+    # ==========================================================
+    # FILE SHARING TABLE
+    # ==========================================================
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS files
+        (
+
+            file_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+
+            sender_id INTEGER NOT NULL,
+
+
+            receiver_id INTEGER NOT NULL,
+
+
+            file_name TEXT NOT NULL,
+
+
+            file_path TEXT NOT NULL,
+
+
+            file_type TEXT,
+
+
+            file_size INTEGER,
+
+
+            sent_at TEXT,
+
+
+            FOREIGN KEY(sender_id)
+                REFERENCES users(user_id),
+
+
+            FOREIGN KEY(receiver_id)
+                REFERENCES users(user_id)
+
+        )
+        """
+    )
+
     # ======================================================
     # SAVE CHANGES
     # ======================================================
