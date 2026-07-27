@@ -362,65 +362,58 @@ def search_users(
 
     Excludes:
     - Current logged-in user
+    - Users already in contacts
 
     Returns:
         List of users
     """
 
-
     connection = get_connection()
 
     cursor = connection.cursor()
 
-
-
     cursor.execute(
         """
         SELECT
-
             user_id,
             username,
             full_name,
             status,
             last_seen
 
-
         FROM users
 
-
         WHERE
-
         (
             username LIKE ?
-
             OR
-
             full_name LIKE ?
         )
 
-
         AND user_id != ?
 
+        AND user_id NOT IN
+        (
+            SELECT friend_id
+            FROM contacts
+            WHERE user_id = ?
+        )
 
         ORDER BY full_name ASC
-
         """,
         (
             f"%{keyword}%",
             f"%{keyword}%",
+            current_user_id,
             current_user_id
         )
     )
 
-
     users = cursor.fetchall()
 
-
     connection.close()
-
-
+ 
     return users
-
 
 
 # ==========================================================
@@ -449,7 +442,7 @@ def contact_exists(
 
     cursor.execute(
         """
-        SELECT contact_id
+        SELECT 1
 
         FROM contacts
 
@@ -803,6 +796,86 @@ def get_contacts(
 
 
 # ==========================================================
+# GET CONTACT
+# ==========================================================
+
+def get_contact(
+    user_id,
+    friend_id
+):
+    """
+    Returns a single contact.
+
+    Returns:
+        sqlite3.Row or None
+    """
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+
+            users.user_id,
+            users.username,
+            users.full_name,
+            users.status,
+            users.last_seen
+
+        FROM contacts
+
+        JOIN users
+        ON contacts.friend_id = users.user_id
+
+        WHERE contacts.user_id = ?
+        AND contacts.friend_id = ?
+        """,
+        (
+            user_id,
+            friend_id
+        )
+    )
+
+    contact = cursor.fetchone()
+
+    connection.close()
+
+    return contact
+
+# ==========================================================
+# COUNT CONTACTS
+# ==========================================================
+
+def get_contact_count(user_id):
+    """
+    Returns number of contacts.
+    """
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+
+        FROM contacts
+
+        WHERE user_id = ?
+        """,
+        (
+            user_id,
+        )
+    )
+
+    count = cursor.fetchone()[0]
+
+    connection.close()
+
+    return count
+
+
+# ==========================================================
 # CHAT QUERIES
 # ==========================================================
 
@@ -826,14 +899,18 @@ def save_message(
         False - failed
     """
 
+    # Remove leading/trailing whitespace
+    message = message.strip()
+
+    # Do not save empty messages
+    if not message:
+        return False
 
     connection = get_connection()
 
     cursor = connection.cursor()
 
-
     try:
-
 
         cursor.execute(
             """
@@ -845,7 +922,6 @@ def save_message(
                 sent_at
             )
 
-
             VALUES
             (
                 ?,
@@ -853,7 +929,6 @@ def save_message(
                 ?,
                 ?
             )
-
             """,
             (
                 sender_id,
@@ -863,35 +938,24 @@ def save_message(
             )
         )
 
-
         connection.commit()
-
 
         return True
 
-
-
     except Exception as error:
 
-
         connection.rollback()
-
 
         print(
             "Save message error:",
             error
         )
 
-
         return False
-
-
 
     finally:
 
-
         connection.close()
-
 
 
 # ==========================================================
@@ -1087,3 +1151,72 @@ def mark_message_read(
 
 
         connection.close()
+
+# ==========================================================
+# MARK ALL RECEIVED MESSAGES AS READ
+# ==========================================================
+
+def mark_messages_as_read(
+    receiver_id,
+    sender_id
+):
+    """
+    Marks all messages from another user as read.
+
+    Used when opening conversation.
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    try:
+
+        cursor.execute(
+            """
+            UPDATE chats
+
+            SET is_read = 1
+
+            WHERE receiver_id = ?
+
+            AND sender_id = ?
+
+            """,
+            (
+                receiver_id,
+                sender_id
+            )
+        )
+
+
+        connection.commit()
+
+
+        return True
+
+
+
+    except Exception as error:
+
+
+        connection.rollback()
+
+
+        print(
+            "Mark messages read error:",
+            error
+        )
+
+
+        return False
+
+
+
+    finally:
+
+        connection.close()
+
+

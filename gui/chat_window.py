@@ -8,6 +8,7 @@ Responsibilities:
 - Send messages.
 - Refresh messages.
 - Handle message input.
+- Display chat bubbles.
 
 Business logic:
     modules/chat/chat.py
@@ -17,10 +18,10 @@ Business logic:
 import tkinter as tk
 from tkinter import ttk
 
-
 from modules.chat.chat import (
     send_chat_message,
-    get_display_messages
+    get_display_messages,
+    mark_conversation_read
 )
 
 
@@ -36,8 +37,6 @@ from utils.gui_theme import (
     NORMAL_FONT
 )
 
-
-
 # ==========================================================
 # LOAD MESSAGES
 # ==========================================================
@@ -48,7 +47,7 @@ def load_messages(
     selected_user
 ):
     """
-    Loads chat history into display area.
+    Loads messages as chat bubbles.
     """
 
 
@@ -62,22 +61,78 @@ def load_messages(
         tk.END
     )
 
-
+    mark_conversation_read(
+        current_user["user_id"],
+        selected_user["user_id"]
+    )
 
     messages = get_display_messages(
         current_user["user_id"],
         selected_user["user_id"]
     )
 
-
-
     for message in messages:
 
+        # --------------------------------------------------
+        # Current user's message
+        # --------------------------------------------------
 
-        chat_box.insert(
-            tk.END,
-            message
-        )
+        if message["sender_id"] == current_user["user_id"]:
+
+            chat_box.insert(
+                tk.END,
+                "\nYou\n",
+                "sender_name"
+            )
+
+            chat_box.insert(
+                tk.END,
+                message["message"] + "\n",
+                "sender_message"
+            )
+
+            if message["is_read"]:
+
+                status = "✓✓ Read"
+
+            else:
+
+                status = "✓ Sent"
+
+            chat_box.insert(
+                tk.END,
+                f"{message['time']}   {status}\n",
+                "time"
+            )
+
+        # --------------------------------------------------
+        # Other user's message
+        # --------------------------------------------------
+
+        else:
+
+
+            chat_box.insert(
+                tk.END,
+                "\n"
+                + message["sender"]
+                + "\n",
+                "receiver_name"
+            )
+
+
+            chat_box.insert(
+                tk.END,
+                message["message"] + "\n",
+                "receiver_message"
+            )
+
+
+            chat_box.insert(
+                tk.END,
+                message["time"] + "\n",
+                "time"
+            )
 
 
 
@@ -86,14 +141,55 @@ def load_messages(
     )
 
 
-    # Auto scroll
-
     chat_box.see(
         tk.END
     )
 
+# ==========================================================
+# AUTO REFRESH CHAT
+# ==========================================================
+
+def refresh_chat(
+    window,
+    chat_box,
+    current_user,
+    selected_user
+):
+    """
+    Automatically refreshes
+    conversation every 2 seconds.
+    """
 
 
+    # Stop refreshing if window closed
+
+    if not window.winfo_exists():
+
+        return
+
+
+
+    load_messages(
+        chat_box,
+        current_user,
+        selected_user
+    )
+
+
+
+    # Run again after 2 seconds
+
+    window.after(
+        2000,
+        lambda:
+
+        refresh_chat(
+            window,
+            chat_box,
+            current_user,
+            selected_user
+        )
+    )
 
 
 # ==========================================================
@@ -132,16 +228,11 @@ def send_message_action(
     if success:
 
 
-        # Clear input box
-
         message_entry.delete(
             0,
             tk.END
         )
 
-
-
-        # Reload chat
 
         load_messages(
             chat_box,
@@ -164,18 +255,7 @@ def open_chat_window(
 ):
     """
     Opens chat window.
-
-    Args:
-        parent:
-            Home window.
-
-        current_user:
-            Logged in user.
-
-        selected_user:
-            Contact being chatted with.
     """
-
 
 
     window = tk.Toplevel(
@@ -205,8 +285,8 @@ def open_chat_window(
 
     center_window(
         window,
-        650,
-        550
+        700,
+        600
     )
 
 
@@ -223,7 +303,6 @@ def open_chat_window(
     window.protocol(
         "WM_DELETE_WINDOW",
         lambda:
-
         close_window(window)
     )
 
@@ -232,7 +311,6 @@ def open_chat_window(
     # ======================================================
     # HEADER
     # ======================================================
-
 
     title = tk.Label(
         window,
@@ -249,32 +327,95 @@ def open_chat_window(
         pady=(20,10)
     )
 
-
-
     # ======================================================
-    # CHAT DISPLAY
+    # CHAT DISPLAY WITH SCROLLBAR
     # ======================================================
 
-
-    chat_box = tk.Text(
-        window,
-        wrap="word",
-        state="disabled",
-        font=NORMAL_FONT
+    chat_frame = ttk.Frame(
+        window
     )
 
-
-    chat_box.pack(
+    chat_frame.pack(
         fill="both",
         expand=True,
         padx=15,
         pady=10
     )
 
+    # Message display
+
+    chat_box = tk.Text(
+        chat_frame,
+        wrap="word",
+        state="disabled",
+        font=NORMAL_FONT,
+        padx=10,
+        pady=10
+    )
+
+    chat_box.pack(
+        side="left",
+        fill="both",
+        expand=True
+    )
+
+    # Vertical scrollbar
+
+    scrollbar = ttk.Scrollbar(
+        chat_frame,
+        orient="vertical",
+        command=chat_box.yview
+    )
+
+    scrollbar.pack(
+        side="right",
+        fill="y"
+    )
+
+    # Connect scrollbar to text box
+
+    chat_box.configure(
+        yscrollcommand=scrollbar.set
+    )
+
+    # ======================================================
+    # CHAT BUBBLE FORMATTING
+    # ======================================================
+
+
+    chat_box.tag_configure(
+        "sender_name",
+        justify="right"
+    )
+
+
+    chat_box.tag_configure(
+        "sender_message",
+        justify="right"
+    )
+
+
+    chat_box.tag_configure(
+        "receiver_name",
+        justify="left"
+    )
+
+
+    chat_box.tag_configure(
+        "receiver_message",
+        justify="left"
+    )
+
+
+    chat_box.tag_configure(
+        "time",
+        justify="center"
+    )
+
 
 
     # ======================================================
-    # MESSAGE INPUT AREA
+    # INPUT AREA
     # ======================================================
 
 
@@ -318,7 +459,6 @@ def open_chat_window(
     )
 
 
-
     send_button.pack(
         side="right",
         padx=(10,0)
@@ -327,7 +467,7 @@ def open_chat_window(
 
 
     # ======================================================
-    # ENTER KEY SEND
+    # ENTER SEND
     # ======================================================
 
 
@@ -343,12 +483,9 @@ def open_chat_window(
         )
     )
 
-
-
     # ======================================================
     # INITIAL LOAD
     # ======================================================
-
 
     load_messages(
         chat_box,
@@ -356,6 +493,21 @@ def open_chat_window(
         selected_user
     )
 
+    # ======================================================
+    # START AUTO REFRESH
+    # ======================================================
 
+    window.after(
+        2000,
+        lambda:
+
+        refresh_chat(
+            window,
+            chat_box,
+            current_user,
+            selected_user
+        )
+    )
 
     message_entry.focus()
+

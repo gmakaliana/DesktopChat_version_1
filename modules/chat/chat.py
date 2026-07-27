@@ -16,13 +16,12 @@ with database queries.
 
 from datetime import datetime
 
-
 from database.queries import (
     save_message,
     get_messages,
-    mark_message_read
+    mark_message_read,
+    mark_messages_as_read
 )
-
 
 
 # ==========================================================
@@ -223,10 +222,26 @@ def mark_as_read(
         chat_id
     )
 
+# ==========================================================
+# MARK CONVERSATION AS READ
+# ==========================================================
 
+def mark_conversation_read(
+    current_user_id,
+    other_user_id
+):
+    """
+    Marks incoming messages as read.
+    """
+
+
+    return mark_messages_as_read(
+        current_user_id,
+        other_user_id
+    )
 
 # ==========================================================
-# LOAD FORMATTED CHAT
+# LOAD CHAT MESSAGES FOR GUI
 # ==========================================================
 
 def get_display_messages(
@@ -234,8 +249,20 @@ def get_display_messages(
     other_user_id
 ):
     """
-    Loads chat history and formats
-    messages ready for GUI display.
+    Loads chat history and prepares
+    messages for chat bubble display.
+
+    Returns:
+
+    [
+        {
+            sender_id,
+            sender,
+            message,
+            time
+        }
+    ]
+
     """
 
 
@@ -245,20 +272,66 @@ def get_display_messages(
     )
 
 
-    formatted_messages = []
+    display_messages = []
 
 
 
     for message in messages:
 
 
-        formatted_messages.append(
-            format_message(
-                message,
-                current_user_id
+        timestamp = message["sent_at"]
+
+
+
+        try:
+
+            time = datetime.strptime(
+                timestamp,
+                "%Y-%m-%d %H:%M:%S"
+            ).strftime(
+                "%H:%M"
             )
+
+
+        except Exception:
+
+
+            time = timestamp
+
+
+
+        if message["sender_id"] == current_user_id:
+
+            sender = "You"
+
+
+        else:
+
+            sender = message["sender_name"]
+
+
+
+        display_messages.append(
+
+            {
+                "chat_id": message["chat_id"],
+
+                "sender_id": message["sender_id"],
+
+                "receiver_id": message["receiver_id"],
+
+                "sender": sender,
+
+                "message": message["message"],
+
+                "time": time,
+
+                "is_read": message["is_read"]
+
+            }
+
         )
 
 
 
-    return formatted_messages
+    return display_messages

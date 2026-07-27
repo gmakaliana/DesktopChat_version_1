@@ -2,9 +2,12 @@
 Contacts Window
 
 Allows users to:
+
 - Search for users.
 - Add contacts.
-- View search results.
+- View contacts.
+- Remove contacts.
+- View contact count.
 
 Business logic:
     modules/contacts/contacts.py
@@ -17,8 +20,17 @@ from tkinter import ttk, messagebox
 
 
 from modules.contacts.contacts import (
+
     search_available_users,
-    add_new_contact
+
+    add_new_contact,
+
+    get_user_contacts,
+
+    remove_existing_contact,
+
+    get_user_contact_count
+
 )
 
 
@@ -46,22 +58,17 @@ from utils.gui_theme import (
 
 def search_action(
     search_entry,
-    results_list,
+    results_tree,
     results_objects,
     current_user
 ):
-    """
-    Searches users.
-    """
 
 
     keyword = search_entry.get().strip()
 
 
-
-    results_list.delete(
-        0,
-        tk.END
+    results_tree.delete(
+        *results_tree.get_children()
     )
 
 
@@ -76,20 +83,6 @@ def search_action(
 
 
 
-    if not users:
-
-
-        results_list.insert(
-            tk.END,
-            "No users found"
-        )
-
-
-        return
-
-
-
-
     for user in users:
 
 
@@ -99,33 +92,23 @@ def search_action(
 
 
 
-        if user["status"] == "Online":
-
-            icon = "🟢"
-
-        else:
-
-            icon = "⚪"
+        status = user["status"]
 
 
 
-        display = (
-
-            f"{icon} "
-
-            f"{user['full_name']} "
-
-            f"({user['username']})"
-
-        )
-
-
-        results_list.insert(
+        results_tree.insert(
+            "",
             tk.END,
-            display
+            values=(
+
+                user["username"],
+
+                user["full_name"],
+
+                status
+
+            )
         )
-
-
 
 
 
@@ -134,17 +117,15 @@ def search_action(
 # ==========================================================
 
 def add_contact_action(
-    results_list,
+    results_tree,
     results_objects,
-    current_user
+    current_user,
+    contacts_tree,
+    count_label
 ):
-    """
-    Adds selected search result
-    as contact.
-    """
 
 
-    selected = results_list.curselection()
+    selected = results_tree.selection()
 
 
 
@@ -153,7 +134,7 @@ def add_contact_action(
 
         messagebox.showwarning(
             "No Selection",
-            "Please select a user first."
+            "Select a user first."
         )
 
 
@@ -161,15 +142,22 @@ def add_contact_action(
 
 
 
-    user = results_objects[
+    index = results_tree.index(
         selected[0]
-    ]
+    )
+
+
+
+    user = results_objects[index]
 
 
 
     success = add_new_contact(
+
         current_user["user_id"],
+
         user["user_id"]
+
     )
 
 
@@ -179,8 +167,16 @@ def add_contact_action(
 
         messagebox.showinfo(
             "Success",
-            f"{user['full_name']} added as contact."
+            "Contact added successfully."
         )
+
+
+        load_contacts(
+            contacts_tree,
+            current_user,
+            count_label
+        )
+
 
 
     else:
@@ -188,10 +184,193 @@ def add_contact_action(
 
         messagebox.showerror(
             "Failed",
-            "User is already a contact."
+            "Could not add contact."
         )
 
 
+
+
+
+# ==========================================================
+# LOAD CONTACTS
+# ==========================================================
+
+def load_contacts(
+    contacts_tree,
+    current_user,
+    count_label
+):
+
+
+    contacts_tree.delete(
+        *contacts_tree.get_children()
+    )
+
+
+
+    contacts = get_user_contacts(
+        current_user["user_id"]
+    )
+
+
+
+    for contact in contacts:
+
+
+        contacts_tree.insert(
+            "",
+            tk.END,
+            values=(
+
+                contact["username"],
+
+                contact["full_name"],
+
+                contact["status"],
+
+                contact["last_seen"]
+
+            )
+        )
+
+
+
+    count = get_user_contact_count(
+        current_user["user_id"]
+    )
+
+
+
+    count_label.config(
+        text=f"Contacts: {count}"
+    )
+
+# ==========================================================
+# REMOVE CONTACT
+# ==========================================================
+
+def remove_contact_action(
+    contacts_tree,
+    current_user,
+    count_label
+):
+    """
+    Removes a contact after confirmation.
+    """
+
+
+    selected = contacts_tree.selection()
+
+
+
+    if not selected:
+
+
+        messagebox.showwarning(
+            "No Selection",
+            "Select a contact first."
+        )
+
+
+        return
+
+
+
+    values = contacts_tree.item(
+        selected[0]
+    )["values"]
+
+
+
+    username = values[0]
+
+
+
+    contacts = get_user_contacts(
+        current_user["user_id"]
+    )
+
+
+
+    selected_contact = None
+
+
+
+    for contact in contacts:
+
+
+        if contact["username"] == username:
+
+            selected_contact = contact
+
+            break
+
+
+
+    if selected_contact is None:
+
+        return
+
+
+
+    # ======================================================
+    # CONFIRM REMOVE
+    # ======================================================
+
+    confirm = messagebox.askyesno(
+        "Remove Contact",
+        (
+            f"Are you sure you want to remove "
+            f"{selected_contact['full_name']}?"
+        )
+    )
+
+
+
+    if not confirm:
+
+        return
+
+
+
+    # ======================================================
+    # REMOVE CONTACT
+    # ======================================================
+
+    success = remove_existing_contact(
+
+        current_user["user_id"],
+
+        selected_contact["user_id"]
+
+    )
+
+
+
+    if success:
+
+
+        messagebox.showinfo(
+            "Removed",
+            "Contact removed successfully."
+        )
+
+
+        load_contacts(
+            contacts_tree,
+            current_user,
+            count_label
+        )
+
+
+
+    else:
+
+
+        messagebox.showerror(
+            "Error",
+            "Could not remove contact."
+        )
 
 
 
@@ -203,9 +382,6 @@ def open_contacts_window(
     parent,
     current_user
 ):
-    """
-    Opens contacts management window.
-    """
 
 
     window = tk.Toplevel(
@@ -213,27 +389,21 @@ def open_contacts_window(
     )
 
 
+
     window.title(
-        "Contacts"
+        "Contacts Management"
     )
 
 
-    window.resizable(
-        False,
-        False
+
+    window.geometry(
+        "850x750"
     )
+
 
 
     window.configure(
         background=BACKGROUND
-    )
-
-
-
-    center_window(
-        window,
-        550,
-        500
     )
 
 
@@ -250,8 +420,15 @@ def open_contacts_window(
     window.protocol(
         "WM_DELETE_WINDOW",
         lambda:
-
         close_window(window)
+    )
+
+
+
+    center_window(
+        window,
+        850,
+        750
     )
 
 
@@ -262,128 +439,317 @@ def open_contacts_window(
 
 
     title = tk.Label(
+
         window,
-        text="Search Users",
+
+        text="Contacts",
+
         font=TITLE_FONT,
+
         bg=BACKGROUND
+
     )
 
 
     title.pack(
-        pady=(20,15)
+        pady=15
     )
 
 
 
     # ======================================================
-    # SEARCH AREA
+    # SEARCH SECTION
     # ======================================================
 
 
-    search_frame = ttk.Frame(
-        window
+    search_frame = ttk.LabelFrame(
+
+        window,
+
+        text="Search Users"
+
     )
 
 
     search_frame.pack(
+
         fill="x",
-        padx=30
+
+        padx=20,
+
+        pady=10
+
     )
 
 
 
     search_entry = ttk.Entry(
         search_frame,
-        width=35
+        width=40
     )
 
 
     search_entry.pack(
-        side="left"
-    )
-
-
-
-    # Results storage
-
-    results_objects = []
-
-
-
-    results_list = tk.Listbox(
-        window,
-        width=55,
-        height=15
-    )
-
-
-    results_list.pack(
-        padx=30,
-        pady=20
-    )
-
-
-
-    search_button = ttk.Button(
-        search_frame,
-        text="Search",
-        command=lambda:
-
-        search_action(
-            search_entry,
-            results_list,
-            results_objects,
-            current_user
-        )
-    )
-
-
-    search_button.pack(
-        side="right",
-        padx=10
-    )
-
-
-
-    # ======================================================
-    # ADD CONTACT BUTTON
-    # ======================================================
-
-
-    add_button = ttk.Button(
-        window,
-        text="Add Contact",
-        command=lambda:
-
-        add_contact_action(
-            results_list,
-            results_objects,
-            current_user
-        )
-    )
-
-
-    add_button.pack(
+        side="left",
+        padx=10,
         pady=10
     )
 
 
 
-    # ======================================================
-    # ENTER KEY SEARCH
-    # ======================================================
+    results_objects = []
 
 
-    search_entry.bind(
-        "<Return>",
-        lambda event:
+
+    results_tree = ttk.Treeview(
+
+        window,
+
+        columns=(
+
+            "username",
+
+            "name",
+
+            "status"
+
+        ),
+
+        show="headings",
+
+        height=6
+
+    )
+
+
+    for col in results_tree["columns"]:
+
+
+        results_tree.heading(
+            col,
+            text=col.title()
+        )
+
+
+
+    results_tree.pack(
+        fill="x",
+        padx=20
+    )
+
+
+
+    ttk.Button(
+
+        search_frame,
+
+        text="Search",
+
+        command=lambda:
 
         search_action(
+
             search_entry,
-            results_list,
+
+            results_tree,
+
             results_objects,
+
             current_user
+
         )
+
+    ).pack(
+        side="right",
+        padx=10
+    )
+
+    ttk.Button(
+
+        window,
+
+        text="Add Contact",
+
+        command=lambda:
+
+        add_contact_action(
+
+            results_tree,
+
+            results_objects,
+
+            current_user,
+
+            contacts_tree,
+
+            count_label
+
+        )
+
+    ).pack(
+        pady=10
+    )
+
+    # ======================================================
+    # MY CONTACTS
+    # ======================================================
+
+
+    contacts_frame = ttk.LabelFrame(
+
+        window,
+
+        text="My Contacts"
+
+    )
+
+
+    contacts_frame.pack(
+
+        fill="both",
+
+        padx=20,
+
+        pady=10
+
+    )
+
+
+
+    count_label = ttk.Label(
+        contacts_frame,
+        text="Contacts: 0"
+    )
+
+
+    count_label.pack(
+        anchor="w"
+    )
+
+
+
+    contacts_tree = ttk.Treeview(
+
+        contacts_frame,
+
+        columns=(
+
+            "username",
+
+            "name",
+
+            "status",
+
+            "last_seen"
+
+        ),
+
+        show="headings",
+
+        height=12
+
+    )
+
+    
+
+    for col in contacts_tree["columns"]:
+
+
+        contacts_tree.heading(
+            col,
+            text=col.title()
+        )
+
+
+
+    contacts_tree.pack(
+
+        fill="both",
+
+        expand=True
+
+    )
+
+
+    
+
+    # ======================================================
+    # ACTION BUTTONS
+    # ======================================================
+
+
+    button_frame = ttk.Frame(
+        window
+    )
+
+
+    button_frame.pack(
+        side="bottom",
+        pady=10
+    )
+
+
+
+    ttk.Button(
+
+        button_frame,
+
+        text="Remove Contact",
+
+        command=lambda:
+
+        remove_contact_action(
+
+            contacts_tree,
+
+            current_user,
+
+            count_label
+
+        )
+
+    ).pack(
+        side="left",
+        padx=10
+    )
+
+
+
+    ttk.Button(
+
+        button_frame,
+
+        text="Refresh",
+
+        command=lambda:
+
+        load_contacts(
+
+            contacts_tree,
+
+            current_user,
+
+            count_label
+
+        )
+
+    ).pack(
+        side="left",
+        padx=10
+    )
+
+
+
+    # Initial load
+
+    load_contacts(
+
+        contacts_tree,
+
+        current_user,
+
+        count_label
+
     )
 
 

@@ -6,7 +6,9 @@ Responsible for contact operations.
 Responsibilities:
 - Search users.
 - Add contacts.
+- Remove contacts.
 - Load user contacts.
+- Format contact display data.
 
 GUI should not communicate directly
 with database queries.
@@ -14,9 +16,19 @@ with database queries.
 
 
 from database.queries import (
+
     search_users,
+
     add_contact,
-    get_contacts
+
+    remove_contact,
+
+    get_contacts,
+
+    contact_exists,
+
+    get_contact_count
+
 )
 
 
@@ -41,9 +53,11 @@ def search_available_users(
     Excludes:
 
     - Current user
+    - Existing contacts
 
 
     Returns:
+
         List of users
     """
 
@@ -81,14 +95,36 @@ def add_new_contact(
     """
     Adds a new contact.
 
+    Protection:
+
+    - Cannot add yourself
+    - Cannot add duplicate contact
+
+
     Returns:
 
         True:
             Contact added
 
         False:
-            Failed or already exists
+            Failed
     """
+
+
+
+    if current_user_id == friend_id:
+
+        return False
+
+
+
+    if contact_exists(
+        current_user_id,
+        friend_id
+    ):
+
+        return False
+
 
 
     success = add_contact(
@@ -105,6 +141,44 @@ def add_new_contact(
 
 
 # ==========================================================
+# REMOVE CONTACT
+# ==========================================================
+
+def remove_existing_contact(
+    current_user_id,
+    friend_id
+):
+    """
+    Removes contact relationship.
+
+    Removes both directions:
+
+        User -> Friend
+
+        Friend -> User
+
+
+    Returns:
+
+        True:
+            Removed
+
+        False:
+            Failed
+    """
+
+
+
+    return remove_contact(
+        current_user_id,
+        friend_id
+    )
+
+
+
+
+
+# ==========================================================
 # GET CONTACT LIST
 # ==========================================================
 
@@ -115,7 +189,9 @@ def get_user_contacts(
     Returns user's contacts.
 
     Used by:
+
         home_window.py
+        contacts_window.py
     """
 
 
@@ -125,6 +201,31 @@ def get_user_contacts(
 
 
     return contacts
+
+
+
+
+
+# ==========================================================
+# GET CONTACT COUNT
+# ==========================================================
+
+def get_user_contact_count(
+    user_id
+):
+    """
+    Returns number of contacts.
+
+    Used for:
+
+        - Contact statistics
+        - UI counters
+    """
+
+
+    return get_contact_count(
+        user_id
+    )
 
 
 
@@ -143,11 +244,8 @@ def format_user_result(
     """
 
 
-    status = user["status"]
 
-
-
-    if status == "Online":
+    if user["status"] == "Online":
 
         icon = "🟢"
 
@@ -167,3 +265,64 @@ def format_user_result(
         f"({user['username']})"
 
     )
+
+
+
+
+
+# ==========================================================
+# FORMAT CONTACT DISPLAY
+# ==========================================================
+
+def format_contact_display(
+    contact
+):
+    """
+    Formats contact list display.
+
+    Shows:
+
+    - Status
+    - Name
+    - Username
+    - Last seen
+    """
+
+
+
+    if contact["status"] == "Online":
+
+        icon = "🟢"
+
+
+        return (
+
+            f"{icon} "
+
+            f"{contact['full_name']} "
+
+            f"({contact['username']})"
+
+        )
+
+
+
+    else:
+
+        icon = "⚪"
+
+
+
+        return (
+
+            f"{icon} "
+
+            f"{contact['full_name']} "
+
+            f"({contact['username']}) "
+
+            f"- Last seen: "
+
+            f"{contact['last_seen']}"
+
+        )
