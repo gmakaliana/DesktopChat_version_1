@@ -19,7 +19,7 @@ Responsibilities:
 
 
 from database.db import get_connection
-
+from datetime import datetime
 
 
 # ==========================================================
@@ -1079,6 +1079,102 @@ def get_messages(
 
     return messages
 
+# ==========================================================
+# GET CHAT FILES
+# ==========================================================
+
+def get_chat_files(
+    user_one,
+    user_two
+):
+    """
+    Retrieves shared files between two users.
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+
+    cursor.execute(
+        """
+        SELECT
+
+            files.file_id,
+
+            files.sender_id,
+
+            files.receiver_id,
+
+            files.file_name,
+
+            files.file_path,
+
+            files.file_type,
+
+            files.file_size,
+
+            files.sent_at,
+
+            users.full_name AS sender_name
+
+
+        FROM files
+
+
+        JOIN users
+
+
+        ON files.sender_id = users.user_id
+
+
+        WHERE
+
+
+        (
+            files.sender_id = ?
+
+            AND
+
+            files.receiver_id = ?
+        )
+
+
+        OR
+
+
+        (
+            files.sender_id = ?
+
+            AND
+
+            files.receiver_id = ?
+        )
+
+
+        ORDER BY files.sent_at ASC
+
+
+        """,
+        (
+            user_one,
+            user_two,
+            user_two,
+            user_one
+        )
+    )
+
+
+
+    files = cursor.fetchall()
+
+
+    connection.close()
+
+
+    return files
 
 
 # ==========================================================
@@ -1220,3 +1316,116 @@ def mark_messages_as_read(
         connection.close()
 
 
+# ==========================================================
+# FILE SHARING QUERIES
+# ==========================================================
+
+
+# ==========================================================
+# SAVE CHAT FILE
+# ==========================================================
+
+def save_chat_file(
+    sender_id,
+    receiver_id,
+    file_name,
+    file_path,
+    file_type,
+    file_size,
+    sent_at
+):
+    """
+    Saves shared file information.
+
+    Returns:
+
+        True  - successful
+        False - failed
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    try:
+
+
+        cursor.execute(
+            """
+            INSERT INTO files
+            (
+                sender_id,
+
+                receiver_id,
+
+                file_name,
+
+                file_path,
+
+                file_type,
+
+                file_size,
+
+                sent_at
+            )
+
+
+            VALUES
+            (
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?
+            )
+
+            """,
+            (
+                sender_id,
+
+                receiver_id,
+
+                file_name,
+
+                file_path,
+
+                file_type,
+
+                file_size,
+
+                sent_at
+            )
+        )
+
+
+        connection.commit()
+
+
+        return True
+
+
+
+    except Exception as error:
+
+
+        connection.rollback()
+
+
+        print(
+            "Save chat file error:",
+            error
+        )
+
+
+        return False
+
+
+
+    finally:
+
+
+        connection.close()
