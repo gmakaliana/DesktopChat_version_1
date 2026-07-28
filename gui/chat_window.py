@@ -95,10 +95,15 @@ def load_messages(
 
 
             sender = (
+
                 "You"
+
                 if message["sender_id"] == current_user["user_id"]
+
                 else message["sender"]
+
             )
+
 
 
             chat_box.insert(
@@ -106,6 +111,7 @@ def load_messages(
                 "\n" + sender + "\n",
                 "sender_name"
             )
+
 
 
             size_kb = round(
@@ -120,11 +126,13 @@ def load_messages(
             )
 
 
+
             chat_box.insert(
                 tk.END,
-                f"📎 {message['file_name']}\n",
+                f"📎 {message['file_name']} (Click to download)\n",
                 "file_link"
             )
+
 
 
             end = chat_box.index(
@@ -147,6 +155,8 @@ def load_messages(
 
 
 
+            # Store file information
+
             file_links[tag_name] = {
 
                 "path": message["stored_path"],
@@ -157,11 +167,27 @@ def load_messages(
 
 
 
+            # Make attachment clickable
+
+            chat_box.tag_bind(
+                tag_name,
+                "<Button-1>",
+                lambda event, tag=tag_name:
+
+                download_file_from_tag(
+                    tag,
+                    file_links
+                )
+            )
+
+
+
             chat_box.insert(
                 tk.END,
                 f"{size_kb} KB\n",
                 "time"
             )
+
 
 
             chat_box.insert(
@@ -171,7 +197,9 @@ def load_messages(
             )
 
 
+
             continue
+
 
 
 
@@ -188,6 +216,7 @@ def load_messages(
                 "\nYou\n",
                 "sender_name"
             )
+
 
 
             chat_box.insert(
@@ -221,6 +250,7 @@ def load_messages(
         else:
 
 
+
             chat_box.insert(
                 tk.END,
                 "\n" + message["sender"] + "\n",
@@ -245,14 +275,18 @@ def load_messages(
 
 
 
+
     chat_box.config(
         state="disabled"
     )
 
 
+
     chat_box.see(
         tk.END
     )
+
+
 
 
 
@@ -299,6 +333,8 @@ def refresh_chat(
 
 
 
+
+
 # ==========================================================
 # SEND MESSAGE
 # ==========================================================
@@ -339,12 +375,15 @@ def send_message_action(
         )
 
 
+
         load_messages(
             chat_box,
             current_user,
             selected_user,
             file_links
         )
+
+
 
 
 
@@ -392,62 +431,46 @@ def attach_file_action(
 
 
 
+
+
 # ==========================================================
-# DOWNLOAD FILE
+# DOWNLOAD FILE FROM LINK CLICK
 # ==========================================================
 
-def download_selected_file(
-    event,
-    chat_box,
+def download_file_from_tag(
+    tag_name,
     file_links
 ):
+    """
+    Downloads selected attachment.
+    """
 
 
-    index = chat_box.index(
-        f"@{event.x},{event.y}"
+    file_info = file_links.get(
+        tag_name
     )
 
 
 
-    for tag in chat_box.tag_names(index):
+    if not file_info:
 
-
-        if tag.startswith("file_"):
-
-
-            file_info = file_links.get(tag)
+        return
 
 
 
-            if not file_info:
-
-                return
-
-
-
-            destination = filedialog.asksaveasfilename(
-
-                initialfile=file_info["name"]
-
-            )
+    destination = filedialog.asksaveasfilename(
+        initialfile=file_info["name"]
+    )
 
 
 
-            if destination:
+    if destination:
 
 
-                download_chat_file(
-
-                    file_info["path"],
-
-                    destination
-
-                )
-
-
-
-            break
-
+        download_chat_file(
+            file_info["path"],
+            destination
+        )
 
 # ==========================================================
 # OPEN CHAT WINDOW
@@ -463,14 +486,17 @@ def open_chat_window(
     """
 
 
+
     window = tk.Toplevel(
         parent
     )
 
 
+
     window.title(
         f"Chat with {selected_user['full_name']}"
     )
+
 
 
     window.resizable(
@@ -479,9 +505,11 @@ def open_chat_window(
     )
 
 
+
     window.configure(
         background=BACKGROUND
     )
+
 
 
     center_window(
@@ -491,12 +519,16 @@ def open_chat_window(
     )
 
 
+
     window.transient(
         parent
     )
 
 
+
     window.grab_set()
+
+
 
 
 
@@ -505,6 +537,8 @@ def open_chat_window(
         lambda:
         close_window(window)
     )
+
+
 
 
 
@@ -520,9 +554,12 @@ def open_chat_window(
     )
 
 
+
     title.pack(
         pady=(20,10)
     )
+
+
 
 
 
@@ -535,12 +572,15 @@ def open_chat_window(
     )
 
 
+
     chat_frame.pack(
         fill="both",
         expand=True,
         padx=15,
         pady=10
     )
+
+
 
 
 
@@ -554,6 +594,7 @@ def open_chat_window(
     )
 
 
+
     chat_box.pack(
         side="left",
         fill="both",
@@ -562,11 +603,14 @@ def open_chat_window(
 
 
 
+
+
     scrollbar = ttk.Scrollbar(
         chat_frame,
         orient="vertical",
         command=chat_box.yview
     )
+
 
 
     scrollbar.pack(
@@ -582,9 +626,13 @@ def open_chat_window(
 
 
 
+
+
     # Stores file references
 
     file_links = {}
+
+
 
 
 
@@ -599,10 +647,12 @@ def open_chat_window(
     )
 
 
+
     chat_box.tag_configure(
         "sender_message",
         justify="right"
     )
+
 
 
     chat_box.tag_configure(
@@ -611,10 +661,12 @@ def open_chat_window(
     )
 
 
+
     chat_box.tag_configure(
         "receiver_message",
         justify="left"
     )
+
 
 
     chat_box.tag_configure(
@@ -623,26 +675,49 @@ def open_chat_window(
     )
 
 
+
+
+
+    # ======================================================
+    # FILE LINK STYLE
+    # ======================================================
+
     chat_box.tag_configure(
         "file_link",
         foreground="blue",
-        underline=True
+        underline=True,
+        font=("Arial", 10, "underline")
     )
 
 
 
-    # Double click file download
+    # Change cursor when mouse enters file
 
-    chat_box.bind(
-        "<Double-Button-1>",
+    chat_box.tag_bind(
+        "file_link",
+        "<Enter>",
         lambda event:
 
-        download_selected_file(
-            event,
-            chat_box,
-            file_links
+        chat_box.config(
+            cursor="hand2"
         )
     )
+
+
+
+    # Restore cursor when leaving file
+
+    chat_box.tag_bind(
+        "file_link",
+        "<Leave>",
+        lambda event:
+
+        chat_box.config(
+            cursor=""
+        )
+    )
+
+
 
 
 
@@ -656,6 +731,7 @@ def open_chat_window(
     )
 
 
+
     input_frame.pack(
         fill="x",
         padx=15,
@@ -664,9 +740,12 @@ def open_chat_window(
 
 
 
+
+
     message_entry = ttk.Entry(
         input_frame
     )
+
 
 
     message_entry.pack(
@@ -674,6 +753,8 @@ def open_chat_window(
         fill="x",
         expand=True
     )
+
+
 
 
 
@@ -695,10 +776,13 @@ def open_chat_window(
     )
 
 
+
     attach_button.pack(
         side="left",
         padx=5
     )
+
+
 
 
 
@@ -721,10 +805,13 @@ def open_chat_window(
     )
 
 
+
     send_button.pack(
         side="right",
         padx=(10,0)
     )
+
+
 
 
 
@@ -747,6 +834,8 @@ def open_chat_window(
 
 
 
+
+
     # ======================================================
     # INITIAL LOAD
     # ======================================================
@@ -757,6 +846,8 @@ def open_chat_window(
         selected_user,
         file_links
     )
+
+
 
 
 
@@ -780,5 +871,6 @@ def open_chat_window(
 
 
     message_entry.focus()
-    
-            
+
+
+

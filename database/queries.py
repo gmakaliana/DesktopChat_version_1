@@ -1089,6 +1089,15 @@ def get_chat_files(
 ):
     """
     Retrieves shared files between two users.
+
+
+    file_path returned from database is:
+
+        uploads/images/photo.jpg
+
+
+    The GUI/business layer converts it
+    into the real computer path.
     """
 
 
@@ -1337,6 +1346,20 @@ def save_chat_file(
     """
     Saves shared file information.
 
+    IMPORTANT:
+
+    file_path stores a RELATIVE path.
+
+    Example:
+
+        uploads/images/photo.jpg
+
+
+    NOT:
+
+        C:\Users\George\Documents\Desktop Chat\uploads\images\photo.jpg
+
+
     Returns:
 
         True  - successful
@@ -1429,3 +1452,47 @@ def save_chat_file(
 
 
         connection.close()
+
+
+# ==========================================================
+# CHECK OLD FILE PATHS
+# ==========================================================
+
+def get_old_file_paths():
+    """
+    Finds files stored using old absolute paths.
+
+    Used during migration.
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    cursor.execute(
+        """
+        SELECT
+
+            file_id,
+
+            file_path
+
+        FROM files
+
+        WHERE file_path LIKE 'C:%'
+
+        OR file_path LIKE 'D:%'
+
+        """
+    )
+
+
+    files = cursor.fetchall()
+
+
+    connection.close()
+
+
+    return files

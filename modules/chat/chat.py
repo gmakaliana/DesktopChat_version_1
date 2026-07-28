@@ -21,6 +21,18 @@ import os
 import shutil
 
 
+
+from utils.app_paths import (
+    get_image_folder,
+    get_upload_folder,
+    get_document_folder,
+    get_other_folder,
+    get_relative_file_path,
+    get_absolute_file_path
+)
+
+
+
 from database.queries import (
     save_message,
     get_messages,
@@ -29,6 +41,7 @@ from database.queries import (
     mark_messages_as_read,
     save_chat_file
 )
+
 
 
 
@@ -44,25 +57,17 @@ def get_current_time():
 
 
 
+
+
 # ==========================================================
 # CHAT FILE STORAGE LOCATION
 # ==========================================================
 
 def get_chat_file_folder(file_type):
 
-    documents = Path.home() / "Documents"
-
-
-    base_folder = (
-        documents
-        /
-        "Chat System"
-        /
-        "files"
-    )
-
 
     extension = file_type.lower()
+
 
 
     if extension in [
@@ -73,7 +78,9 @@ def get_chat_file_folder(file_type):
         ".bmp"
     ]:
 
-        folder = base_folder / "images"
+
+        return get_image_folder()
+
 
 
     elif extension in [
@@ -85,22 +92,17 @@ def get_chat_file_folder(file_type):
         ".txt"
     ]:
 
-        folder = base_folder / "documents"
+
+        return get_document_folder()
+
 
 
     else:
 
-        folder = base_folder / "others"
+
+        return get_other_folder()
 
 
-
-    folder.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-
-    return folder
 
 
 
@@ -109,33 +111,57 @@ def get_chat_file_folder(file_type):
 # ==========================================================
 
 def download_chat_file(
-    stored_path,
+    relative_path,
     destination
 ):
     """
     Copies stored chat file
     to selected destination.
+
+
+    Database stores:
+
+        uploads/images/photo.jpg
+
+
+    Function converts it into:
+
+        C:/Users/User/Documents/Desktop Chat/uploads/images/photo.jpg
+
     """
 
 
     try:
 
+
+        actual_file_path = get_absolute_file_path(
+            relative_path
+        )
+
+
+
         shutil.copy2(
-            stored_path,
+            actual_file_path,
             destination
         )
+
 
         return True
 
 
+
     except Exception as error:
+
 
         print(
             "Download file error:",
             error
         )
 
+
         return False
+
+
 
 
 
@@ -149,7 +175,9 @@ def send_chat_message(
     message
 ):
 
+
     message = message.strip()
+
 
 
     if not message:
@@ -164,6 +192,8 @@ def send_chat_message(
         message,
         get_current_time()
     )
+
+
 
 
 
@@ -186,14 +216,17 @@ def send_chat_file(
 
 
 
+
     file_name = os.path.basename(
         original_file_path
     )
 
 
+
     file_type = os.path.splitext(
         file_name
     )[1]
+
 
 
     file_size = os.path.getsize(
@@ -218,10 +251,12 @@ def send_chat_file(
 
     try:
 
+
         shutil.copy2(
             original_file_path,
             destination
         )
+
 
 
     except Exception as error:
@@ -238,6 +273,26 @@ def send_chat_file(
 
 
 
+    # ======================================================
+    # IMPORTANT CHANGE
+    #
+    # Convert absolute path:
+    #
+    # C:\Users\George\Documents\Desktop Chat\uploads\images\a.jpg
+    #
+    # INTO:
+    #
+    # uploads/images/a.jpg
+    #
+    # ======================================================
+
+
+    relative_path = get_relative_file_path(
+        destination
+    )
+
+
+
     return save_chat_file(
 
         sender_id,
@@ -246,7 +301,7 @@ def send_chat_file(
 
         file_name,
 
-        str(destination),
+        relative_path,
 
         file_type,
 
@@ -255,6 +310,8 @@ def send_chat_file(
         get_current_time()
 
     )
+
+
 
 
 
@@ -267,10 +324,13 @@ def load_chat_history(
     user_two
 ):
 
+
     return get_messages(
         user_one,
         user_two
     )
+
+
 
 
 
@@ -283,10 +343,13 @@ def mark_conversation_read(
     other_user_id
 ):
 
+
     return mark_messages_as_read(
         current_user_id,
         other_user_id
     )
+
+
 
 
 
@@ -298,9 +361,12 @@ def mark_as_read(
     chat_id
 ):
 
+
     return mark_message_read(
         chat_id
     )
+
+
 
 
 
@@ -385,6 +451,8 @@ def get_display_messages(
 
 
 
+
+
     # ======================================================
     # FILE MESSAGES
     # ======================================================
@@ -440,9 +508,11 @@ def get_display_messages(
 
                 "file_name": file["file_name"],
 
-                # IMPORTANT:
-                # chat_window.py expects this name
+
+                # DATABASE NOW STORES RELATIVE PATH
+
                 "stored_path": file["file_path"],
+
 
                 "file_type": file["file_type"],
 
@@ -458,9 +528,12 @@ def get_display_messages(
 
 
 
+
+
     # ======================================================
     # SORT ALL CHAT ITEMS
     # ======================================================
+
 
     display_messages.sort(
         key=lambda x: x["sort_time"]
@@ -469,5 +542,3 @@ def get_display_messages(
 
 
     return display_messages
-
-

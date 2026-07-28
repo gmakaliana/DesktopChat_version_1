@@ -13,12 +13,14 @@ Documents/
         uploads/
         backups/
 
-This structure supports PyInstaller deployment.
+Supports:
+- Normal Python execution
+- PyInstaller deployment
+- Moving application between computers
 """
 
 
 from pathlib import Path
-import os
 
 
 
@@ -36,7 +38,7 @@ APP_NAME = "Desktop Chat"
 
 def get_documents_folder():
     """
-    Returns the user's Documents folder.
+    Returns user's Documents folder.
     """
 
     return Path.home() / "Documents"
@@ -49,7 +51,7 @@ def get_documents_folder():
 
 def get_app_data_folder():
     """
-    Returns Desktop Chat user data folder.
+    Main application data folder.
     """
 
     folder = (
@@ -58,10 +60,12 @@ def get_app_data_folder():
         APP_NAME
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
+
 
     return folder
 
@@ -72,9 +76,6 @@ def get_app_data_folder():
 # ==========================================================
 
 def get_database_folder():
-    """
-    Returns database storage folder.
-    """
 
     folder = (
         get_app_data_folder()
@@ -82,19 +83,18 @@ def get_database_folder():
         "database"
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
+
 
     return folder
 
 
 
 def get_database_path():
-    """
-    Returns SQLite database file path.
-    """
 
     return (
         get_database_folder()
@@ -116,10 +116,12 @@ def get_upload_folder():
         "uploads"
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
+
 
     return folder
 
@@ -133,10 +135,12 @@ def get_profile_folder():
         "profiles"
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
+
 
     return folder
 
@@ -150,12 +154,111 @@ def get_image_folder():
         "images"
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
 
+
     return folder
+
+
+
+def get_document_folder():
+
+    folder = (
+        get_upload_folder()
+        /
+        "documents"
+    )
+
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+
+    return folder
+
+
+
+def get_other_folder():
+
+    folder = (
+        get_upload_folder()
+        /
+        "others"
+    )
+
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+
+    return folder
+
+
+
+# ==========================================================
+# RELATIVE FILE PATH SUPPORT
+# ==========================================================
+
+def get_relative_file_path(full_path):
+    """
+    Converts absolute path into database-safe relative path.
+
+    Example:
+
+    Input:
+
+    C:/Users/George/Documents/Desktop Chat/uploads/images/photo.jpg
+
+
+    Output:
+
+    uploads/images/photo.jpg
+    """
+
+
+    app_folder = get_app_data_folder()
+
+
+    relative_path = Path(full_path).relative_to(
+        app_folder
+    )
+
+
+    return str(relative_path)
+
+
+
+def get_absolute_file_path(relative_path):
+    """
+    Converts database relative path back
+    into a real computer path.
+
+    Example:
+
+    Database:
+
+    uploads/images/photo.jpg
+
+
+    Returns:
+
+    C:/Users/John/Documents/Desktop Chat/uploads/images/photo.jpg
+    """
+
+
+    return (
+        get_app_data_folder()
+        /
+        relative_path
+    )
 
 
 
@@ -171,9 +274,12 @@ def get_backup_folder():
         "backup"
     )
 
+
     folder.mkdir(
         parents=True,
         exist_ok=True
     )
 
+
     return folder
+
