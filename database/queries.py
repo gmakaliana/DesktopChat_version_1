@@ -1344,27 +1344,22 @@ def save_chat_file(
     sent_at
 ):
     """
-    Saves shared file information.
+Saves shared file information.
 
-    IMPORTANT:
+File paths stored in the database must be relative paths.
 
-    file_path stores a RELATIVE path.
+Example:
 
-    Example:
+    uploads/images/photo.jpg
 
-        uploads/images/photo.jpg
+The application reconstructs the full path
+using utils.app_paths.py.
 
+Returns:
 
-    NOT:
-
-        C:\Users\George\Documents\Desktop Chat\uploads\images\photo.jpg
-
-
-    Returns:
-
-        True  - successful
-        False - failed
-    """
+    True  - successful
+    False - failed
+"""
 
 
     connection = get_connection()

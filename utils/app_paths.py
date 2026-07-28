@@ -283,3 +283,72 @@ def get_backup_folder():
 
     return folder
 
+# ==========================================================
+# DOWNLOAD PATHS
+# ==========================================================
+
+def get_download_folder():
+
+    folder = (
+        get_app_data_folder()
+        /
+        "downloads"
+    )
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    return folder
+
+
+
+def get_download_image_folder():
+
+    folder = (
+        get_download_folder()
+        /
+        "images"
+    )
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    return folder
+
+
+def get_download_document_folder():
+
+    folder = (
+        get_download_folder()
+        /
+        "documents"
+    )
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    return folder
+
+
+
+def get_download_other_folder():
+
+    folder = (
+        get_download_folder()
+        /
+        "others"
+    )
+
+    folder.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    return folder
+

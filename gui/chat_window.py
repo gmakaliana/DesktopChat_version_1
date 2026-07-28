@@ -40,7 +40,15 @@ from utils.gui_theme import (
     NORMAL_FONT
 )
 
+from tkinter import messagebox
+from pathlib import Path
 
+
+from utils.app_paths import (
+    get_download_image_folder,
+    get_download_document_folder,
+    get_download_other_folder
+)
 
 # ==========================================================
 # LOAD MESSAGES
@@ -442,7 +450,8 @@ def download_file_from_tag(
     file_links
 ):
     """
-    Downloads selected attachment.
+    Automatically downloads attachment
+    into correct download folder.
     """
 
 
@@ -451,26 +460,89 @@ def download_file_from_tag(
     )
 
 
-
     if not file_info:
 
         return
 
 
 
-    destination = filedialog.asksaveasfilename(
-        initialfile=file_info["name"]
+    file_name = file_info["name"]
+
+
+    extension = Path(
+        file_name
+    ).suffix.lower()
+
+
+
+    # ======================================================
+    # SELECT DOWNLOAD LOCATION
+    # ======================================================
+
+    if extension in [
+
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp"
+
+    ]:
+
+        folder = get_download_image_folder()
+
+
+
+    elif extension in [
+
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".txt"
+
+    ]:
+
+        folder = get_download_document_folder()
+
+    else:
+
+        folder = get_download_other_folder()
+
+    destination = (
+        folder
+        /
+        file_name
     )
 
 
 
-    if destination:
+    success = download_chat_file(
+        file_info["path"],
+        destination
+    )
 
 
-        download_chat_file(
-            file_info["path"],
-            destination
+
+    if success:
+
+
+        messagebox.showinfo(
+            "Download Complete",
+            f"{file_name}\n\nDownloaded successfully."
         )
+
+
+    else:
+
+
+        messagebox.showerror(
+            "Download Failed",
+            "Could not download file."
+        )
+
+
 
 # ==========================================================
 # OPEN CHAT WINDOW
