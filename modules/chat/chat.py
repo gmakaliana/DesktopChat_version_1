@@ -42,7 +42,10 @@ from database.queries import (
     save_chat_file
 )
 
-
+from database.queries import (
+    get_unread_message_count,
+    get_total_unread_messages
+)
 
 
 # ==========================================================
@@ -56,7 +59,33 @@ def get_current_time():
     )
 
 
+# ==========================================================
+# GET CONTACT UNREAD COUNT
+# ==========================================================
 
+def get_contact_unread_count(
+    current_user_id,
+    contact_id
+):
+
+    return get_unread_message_count(
+        current_user_id,
+        contact_id
+    )
+
+
+
+# ==========================================================
+# GET TOTAL UNREAD COUNT
+# ==========================================================
+
+def get_unread_count(
+    user_id
+):
+
+    return get_total_unread_messages(
+        user_id
+    )
 
 
 # ==========================================================

@@ -1491,3 +1491,95 @@ def get_old_file_paths():
 
 
     return files
+
+# ==========================================================
+# COUNT UNREAD MESSAGES
+# ==========================================================
+
+def get_unread_message_count(
+    receiver_id,
+    sender_id
+):
+    """
+    Returns unread messages
+    from a specific user.
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+
+        FROM chats
+
+        WHERE receiver_id = ?
+
+        AND sender_id = ?
+
+        AND is_read = 0
+
+        """,
+        (
+            receiver_id,
+            sender_id
+        )
+    )
+
+
+    count = cursor.fetchone()[0]
+
+
+    connection.close()
+
+
+    return count
+
+
+# ==========================================================
+# TOTAL UNREAD MESSAGES
+# ==========================================================
+
+def get_total_unread_messages(
+    user_id
+):
+    """
+    Returns total unread messages.
+    """
+
+
+    connection = get_connection()
+
+    cursor = connection.cursor()
+
+
+    cursor.execute(
+        """
+        SELECT COUNT(*)
+
+        FROM chats
+
+        WHERE receiver_id = ?
+
+        AND is_read = 0
+
+        """,
+        (
+            user_id,
+        )
+    )
+
+
+    count = cursor.fetchone()[0]
+
+
+    connection.close()
+
+
+    return count
+
+
