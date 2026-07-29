@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+websockets
+bcrypt
+pillow
+python-multipart
+websocket-client
